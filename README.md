@@ -17,9 +17,9 @@ A modern editor for text-based diagrams. Write PlantUML or Mermaid on the left, 
 | Package | Purpose |
 | --- | --- |
 | [`packages/sapia-core`](packages/sapia-core) (`@sapia/core`) | Everything that is not UI: plugin system, language registry and detection, tokenizer toolkit, metamodels, conversion, i18n, config, storage and the AI tool contracts. |
-| [`packages/sapia-plugin-plantuml`](packages/sapia-plugin-plantuml) | PlantUML support, built on `@plantuml/core`. |
-| [`packages/sapia-plugin-mermaid`](packages/sapia-plugin-mermaid) | Mermaid support. |
-| [`packages/sapia-web`](packages/sapia-web) | The web application: Angular (zoneless) with Angular Material and CodeMirror 6. |
+| [`packages/sapia-plugin-plantuml`](packages/sapia-plugin-plantuml) (`@sapia/plugin-plantuml`) | PlantUML support, built on `@plantuml/core`. |
+| [`packages/sapia-plugin-mermaid`](packages/sapia-plugin-mermaid) (`@sapia/plugin-mermaid`) | Mermaid support. |
+| [`packages/sapia-web`](packages/sapia-web) (`@sapia/web`) | The web application: Angular (zoneless) with Angular Material and CodeMirror 6. Published as a ready-built static site. |
 | [`packages/sapia-desktop`](packages/sapia-desktop) (`@sapia/desktop`) | The desktop application: Electron shell around `sapia-web`, plus config file, npm/local plugins and the AI backend. |
 | [`examples/sapia-plugin-dot`](examples/sapia-plugin-dot) | A dependency-free example plugin (Graphviz DOT). |
 
@@ -124,7 +124,27 @@ Plugins can add provider types, see below.
 
 ## Sapia Web
 
-`npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`. It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
+`npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`; the same build is published as [`@sapia/web`](https://www.npmjs.com/package/@sapia/web). It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
+
+## Releasing
+
+All packages (`@sapia/core`, `@sapia/plugin-plantuml`, `@sapia/plugin-mermaid`, `@sapia/web`, `@sapia/desktop`) share one version. `main` carries the next version as a snapshot (`X.Y.Z-snapshot.0`), which is never published.
+
+To release, push a tag on the commit you want to ship:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+The [release workflow](.github/workflows/release.yml) sets the version from the tag on all packages (only inside the run), builds, tests and publishes them to npm with provenance, then commits the next snapshot (`0.1.2-snapshot.0`) to `main`. Versions already on npm are skipped, so a failed run can be re-run. `node scripts/set-version.mjs <version>` does the same version change locally.
+
+npm authentication, one of:
+
+- **Trusted publishing (recommended, no secret):** on npmjs.com, open each of the five packages → *Settings* → *Trusted Publisher* → *GitHub Actions*, with organization/user `Hakenadu`, repository `sapia`, workflow filename `release.yml`, no environment. The package has to exist on npm once before this is possible.
+- **Token:** create a granular access token on npmjs.com with read and write access to the `@sapia` scope (and "bypass 2FA" if the account requires 2FA for writes), and store it as the repository secret `NPM_TOKEN`.
+
+If `main` is protected against direct pushes, allow GitHub Actions to push to it, or the snapshot step fails after a successful publish.
 
 ## Writing a plugin
 

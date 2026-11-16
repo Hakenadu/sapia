@@ -7,6 +7,8 @@ npm install -g @sapia/desktop
 sapia
 ```
 
+`sapia` returns as soon as the window is up; `sapia --wait` keeps the terminal attached and shows the log output.
+
 Requires Node.js 22 or newer. On first start, Sapia guides you through language, theme and an optional AI provider and writes `~/.sapia/config.json`.
 
 The Electron runtime (about 110 MB) is downloaded into `~/.sapia/electron` on the very first start, without install scripts. Behind a company proxy, Sapia uses `HTTPS_PROXY`/`NO_PROXY` or npm's proxy settings and the operating system's certificates; `ELECTRON_MIRROR` selects an internal mirror. See the [full documentation](https://github.com/Hakenadu/sapia#sapia-desktop).

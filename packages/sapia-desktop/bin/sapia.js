@@ -230,7 +230,12 @@ function linuxNeedsNoSandbox(electron) {
 }
 
 function start(electron) {
-  const args = [main, ...process.argv.slice(2)];
+  const userArgs = process.argv.slice(2);
+  // Attached only when asked for (--wait, SAPIA_FOREGROUND=1) or when Sapia prints
+  // something and exits (--help). Otherwise the window runs on its own and the
+  // terminal is free again (or closes, when it was opened just for Sapia).
+  const foreground = userArgs.includes('--wait') || process.env.SAPIA_FOREGROUND === '1' || userArgs.includes('--help') || userArgs.includes('-h');
+  const args = [main, ...userArgs.filter((arg) => arg !== '--wait')];
   if (linuxNeedsNoSandbox(electron)) {
     if (process.env.SAPIA_NO_SANDBOX !== '1') {
       console.warn('Sapia: the Chromium sandbox is not available on this system, starting without it.');
@@ -238,9 +243,22 @@ function start(electron) {
     args.splice(1, 0, '--no-sandbox');
   }
 
+  if (!foreground) {
+    const child = spawn(electron, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    child.on('error', (error) => {
+      console.error(say(`Sapia could not be started: ${error.message}`, `Sapia konnte nicht gestartet werden: ${error.message}`));
+      process.exit(1);
+    });
+    child.on('spawn', () => {
+      child.unref();
+      process.exit(0);
+    });
+    return;
+  }
+
   const child = spawn(electron, args, { stdio: 'inherit', windowsHide: false });
   child.on('error', (error) => {
-    console.error(`Sapia could not be started: ${error.message}`);
+    console.error(say(`Sapia could not be started: ${error.message}`, `Sapia konnte nicht gestartet werden: ${error.message}`));
     process.exit(1);
   });
   child.on('close', (code, signal) => {

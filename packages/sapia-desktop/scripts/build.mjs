@@ -14,7 +14,7 @@ const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 
 if (process.argv.includes('--with-web') || !existsSync(join(webDist, 'index.html'))) {
   console.log('Building sapia-web …');
-  execSync('npm run build -w sapia-web', { cwd: repo, stdio: 'inherit' });
+  execSync('npm run build -w @sapia/web', { cwd: repo, stdio: 'inherit' });
 }
 
 rmSync(dist, { recursive: true, force: true });

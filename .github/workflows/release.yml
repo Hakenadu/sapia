@@ -1,0 +1,89 @@
+# Release: push a tag vX.Y.Z on any commit.
+#   1. The version from the tag is set on all packages (only inside this run, not committed).
+#   2. Build, test, publish to npm with provenance.
+#   3. The next snapshot version X.Y.(Z+1)-snapshot.0 is committed to main.
+#
+# Authentication: npm trusted publishing (OIDC) for each package, or an
+# NPM_TOKEN repository secret as a fallback (see README, "Releasing").
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write # push the snapshot commit to main
+  id-token: write # npm trusted publishing and provenance
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24 # npm >= 11.5 for trusted publishing
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          node scripts/set-version.mjs "$VERSION"
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm test
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Order matters: dependencies first. Versions already on npm are skipped,
+          # so a failed run can simply be re-run.
+          for pkg in @sapia/core @sapia/plugin-plantuml @sapia/plugin-mermaid @sapia/web @sapia/desktop; do
+            if npm view "$pkg@$VERSION" version >/dev/null 2>&1; then
+              echo "$pkg@$VERSION is already published, skipping."
+            else
+              npm publish -w "$pkg" --provenance --access public
+            fi
+          done
+
+  next-snapshot:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Commit next snapshot version to main
+        run: |
+          NEXT="$(node scripts/set-version.mjs --next-snapshot "${GITHUB_REF_NAME#v}")"
+          CURRENT="$(node -p 'require("./package.json").version')"
+          # Never move main backwards (e.g. when an older release is re-tagged).
+          if [ "$(printf '%s\n%s\n' "${CURRENT%%-*}" "${NEXT%%-*}" | sort -V | tail -n1)" != "${NEXT%%-*}" ]; then
+            echo "main is already at $CURRENT, leaving it."
+            exit 0
+          fi
+          node scripts/set-version.mjs "$NEXT"
+          if git diff --quiet; then
+            echo "main is already at $NEXT."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Prepare next development version $NEXT"
+          git push origin HEAD:main

@@ -1,13 +1,24 @@
 {
   "name": "@sapia/desktop",
-  "version": "0.1.0",
+  "version": "0.1.1-snapshot.0",
   "description": "Sapia Desktop – a modern editor for text-based diagrams (PlantUML, Mermaid, plugins) with an AI assistant.",
   "license": "MIT",
-  "keywords": ["diagram", "plantuml", "mermaid", "editor", "uml", "electron"],
+  "keywords": [
+    "diagram",
+    "plantuml",
+    "mermaid",
+    "editor",
+    "uml",
+    "electron"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Hakenadu/sapia.git",
     "directory": "packages/sapia-desktop"
+  },
+  "homepage": "https://github.com/Hakenadu/sapia#readme",
+  "bugs": {
+    "url": "https://github.com/Hakenadu/sapia/issues"
   },
   "main": "dist/main.cjs",
   "bin": {
@@ -33,7 +44,7 @@
   },
   "devDependencies": {
     "@ai-sdk/openai": "^4.0.118",
-    "@sapia/core": "0.1.0",
+    "@sapia/core": "0.1.1-snapshot.0",
     "@types/node": "^22.0.0",
     "ai": "^7.0.173",
     "esbuild": "^0.28.0",

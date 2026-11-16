@@ -257,7 +257,8 @@ Options:
 Configuration:    ${paths.config}
 Diagrams:         ${paths.diagrams}
 Plugins:          npm install --prefix ${paths.plugins} <package>, then list the package under "plugins"
-Environment:      SAPIA_HOME overrides the configuration directory (default ~/.sapia)`);
+Environment:      SAPIA_HOME overrides the configuration directory (default ~/.sapia),
+                  SAPIA_FOREGROUND=1 works like --wait`);
 }
 
 const args = process.argv.slice(app.isPackaged ? 1 : 2);
