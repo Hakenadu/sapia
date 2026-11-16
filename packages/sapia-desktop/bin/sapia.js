@@ -6,6 +6,12 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  // Answered here so that asking for the version does not start Electron.
+  console.log(require('../package.json').version);
+  process.exit(0);
+}
+
 const main = path.join(__dirname, '..', 'dist', 'main.cjs');
 if (!fs.existsSync(main)) {
   console.error('Sapia Desktop is not built. Run "npm run build" in the repository first.');
