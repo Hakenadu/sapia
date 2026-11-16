@@ -1,6 +1,6 @@
 {
   "name": "@sapia/core",
-  "version": "0.1.1-snapshot.0",
+  "version": "0.1.2-snapshot.0",
   "description": "UI-agnostic core of Sapia: plugin system, language registry, diagram metamodels, conversion, i18n, storage, config and AI tool contracts.",
   "license": "MIT",
   "keywords": [

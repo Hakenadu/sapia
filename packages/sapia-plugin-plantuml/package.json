@@ -1,6 +1,6 @@
 {
   "name": "@sapia/plugin-plantuml",
-  "version": "0.1.1-snapshot.0",
+  "version": "0.1.2-snapshot.0",
   "description": "PlantUML language support for Sapia: detection, highlighting, completion, validation, in-browser rendering and metamodel converters.",
   "license": "MIT",
   "keywords": [
@@ -46,7 +46,7 @@
     "@plantuml/core": "^1.2026.10"
   },
   "peerDependencies": {
-    "@sapia/core": "^0.1.1-snapshot.0"
+    "@sapia/core": "^0.1.2-snapshot.0"
   },
   "engines": {
     "node": ">=22"
