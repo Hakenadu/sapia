@@ -244,7 +244,7 @@ function start(electron) {
   }
 
   if (!foreground) {
-    const child = spawn(electron, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    const child = spawn(electron, args, { detached: true, stdio: 'ignore', windowsHide: false });
     child.on('error', (error) => {
       console.error(say(`Sapia could not be started: ${error.message}`, `Sapia konnte nicht gestartet werden: ${error.message}`));
       process.exit(1);
