@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { BUILTIN_AI_PROVIDER_TYPES } from '@sapia/core';
+import { BUILTIN_AI_PROVIDER_TYPES, resolveHeaderValue } from '@sapia/core';
 import type { AiProviderConfig, AiProviderTypeInfo } from '@sapia/core';
 import type { LanguageModel } from 'ai';
 
@@ -7,6 +7,8 @@ export interface ProviderContext {
   /** The provider entry from the config, with the API key resolved. */
   config: AiProviderConfig;
   apiKey: string | undefined;
+  /** The custom headers of the entry, environment references expanded. Send them with every request. */
+  headers: Record<string, string>;
 }
 
 /** Turns a provider entry of the config into an AI SDK language model. */
@@ -40,12 +42,25 @@ export function resolveApiKey(config: AiProviderConfig, info: AiProviderTypeInfo
   return name ? env[name] || undefined : undefined;
 }
 
+/**
+ * The custom headers of a provider entry, ready to send. `${env:NAME}`
+ * references are expanded, and an `authorization` header in any spelling is
+ * named `Authorization`, so it replaces the bearer token instead of joining it.
+ */
+export function resolveHeaders(config: AiProviderConfig, env: NodeJS.ProcessEnv): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(config.headers ?? {})) {
+    headers[name.toLowerCase() === 'authorization' ? 'Authorization' : name] = resolveHeaderValue(value, env);
+  }
+  return headers;
+}
+
 function openAi(context: ProviderContext) {
   return createOpenAI({
     // Local servers often need no key, but the client insists on one.
     apiKey: context.apiKey ?? 'not-needed',
     baseURL: context.config.baseUrl?.replace(/\/+$/, '') || undefined,
-    headers: context.config.headers,
+    headers: context.headers,
   });
 }
 
@@ -53,7 +68,7 @@ function openAi(context: ProviderContext) {
 async function listOpenAiModels(context: ProviderContext, defaultBaseUrl: string): Promise<string[]> {
   const base = (context.config.baseUrl || defaultBaseUrl).replace(/\/+$/, '');
   const response = await fetch(`${base}/models`, {
-    headers: { ...(context.apiKey ? { Authorization: `Bearer ${context.apiKey}` } : {}), ...context.config.headers },
+    headers: { ...(context.apiKey ? { Authorization: `Bearer ${context.apiKey}` } : {}), ...context.headers },
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) {

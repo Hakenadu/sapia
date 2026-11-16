@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
+import { isValidHeaderName, isValidHeaderValue } from '@sapia/core';
 import type { AiProviderConfig, AiProviderTypeInfo, ThemePreference } from '@sapia/core';
 import { formatBinding } from '../core/keys';
 import { I18nService } from '../core/i18n.service';
@@ -15,6 +16,15 @@ type TestState =
   | { status: 'failed'; message: string }
   /** The endpoint answers but does not list the model: the user decides. */
   | { status: 'unlisted'; models: string[] };
+
+/** One editable row of the custom header list. */
+interface HeaderRow {
+  id: number;
+  name: string;
+  value: string;
+  /** Shows the value in plain text; values are masked like the API key by default. */
+  revealed: boolean;
+}
 
 /**
  * First-run flow of the desktop app: appearance, optional AI provider, then
@@ -48,6 +58,27 @@ export class Onboarding {
   protected readonly baseUrl = signal('');
   protected readonly apiKey = signal('');
   protected readonly model = signal('');
+  protected readonly headers = signal<HeaderRow[]>([]);
+  protected readonly headersOpen = signal(false);
+  private nextHeaderId = 0;
+  protected readonly envExample = '${env:NAME}';
+  /** Per row id: the problem with that row, if any. */
+  protected readonly headerErrors = computed(() => {
+    const errors = new Map<number, string>();
+    const seen = new Set<string>();
+    for (const row of this.headers()) {
+      const name = row.name.trim();
+      if (!name && !row.value) continue;
+      const key = name.toLowerCase();
+      if (!name) errors.set(row.id, this.t('onboarding.ai.headers.missingName'));
+      else if (!isValidHeaderName(name)) errors.set(row.id, this.t('onboarding.ai.headers.invalidName'));
+      else if (seen.has(key)) errors.set(row.id, this.t('onboarding.ai.headers.duplicate', { name }));
+      else if (!isValidHeaderValue(row.value)) errors.set(row.id, this.t('onboarding.ai.headers.invalidValue'));
+      seen.add(key);
+    }
+    return errors;
+  });
+  protected readonly headerCount = computed(() => this.headers().filter((h) => h.name.trim()).length);
   protected readonly models = signal<string[]>([]);
   protected readonly test = signal<TestState>({ status: 'idle' });
   protected readonly saving = signal(false);
@@ -56,7 +87,9 @@ export class Onboarding {
   protected readonly configPath = signal('');
 
   protected readonly selectedType = computed(() => this.providerTypes().find((p) => p.id === this.type()));
-  protected readonly canConnect = computed(() => !!this.type() && !!this.model().trim() && !this.saving() && this.test().status !== 'testing');
+  protected readonly canConnect = computed(
+    () => !!this.type() && !!this.model().trim() && this.headerErrors().size === 0 && !this.saving() && this.test().status !== 'testing',
+  );
   protected readonly shortcut = computed(() => formatBinding(this.sapia.config().keybindings.aiAssistant));
   protected readonly connectedSummary = computed(() => {
     const provider = this.connected();
@@ -88,11 +121,33 @@ export class Onboarding {
     if (this.test().status !== 'testing') this.test.set({ status: 'idle' });
   }
 
+  protected toggleHeaders(): void {
+    const open = !this.headersOpen();
+    this.headersOpen.set(open);
+    if (open && !this.headers().length) this.addHeader();
+  }
+
+  protected addHeader(): void {
+    this.headers.update((rows) => [...rows, { id: this.nextHeaderId++, name: '', value: '', revealed: false }]);
+  }
+
+  protected updateHeader(id: number, change: Partial<Omit<HeaderRow, 'id'>>): void {
+    this.headers.update((rows) => rows.map((row) => (row.id === id ? { ...row, ...change } : row)));
+    if (!('revealed' in change)) this.edited();
+  }
+
+  protected removeHeader(id: number): void {
+    this.headers.update((rows) => rows.filter((row) => row.id !== id));
+    this.edited();
+  }
+
   private provider(): AiProviderConfig {
     const provider: AiProviderConfig = { type: this.type(), model: this.model().trim() };
     const baseUrl = this.baseUrl().trim();
     if (baseUrl && baseUrl !== this.selectedType()?.defaultBaseUrl) provider.baseUrl = baseUrl;
     if (this.apiKey().trim()) provider.apiKey = this.apiKey().trim();
+    const headers = this.headers().filter((h) => h.name.trim());
+    if (headers.length) provider.headers = Object.fromEntries(headers.map((h) => [h.name.trim(), h.value.trim()]));
     return provider;
   }
 

@@ -88,6 +88,65 @@
           </label>
         </div>
 
+        <div class="headers" [class.open]="headersOpen()">
+          <button class="disclosure" [attr.aria-expanded]="headersOpen()" aria-controls="ob-headers" (click)="toggleHeaders()">
+            <sapia-icon name="tool" [size]="14" />
+            <span>{{ t('onboarding.ai.headers.title') }}</span>
+            @if (headerCount()) {
+              <span class="count">{{ headerCount() }}</span>
+            }
+            <span class="optional">{{ t('onboarding.ai.headers.optional') }}</span>
+            <sapia-icon name="chevron-down" class="chevron" [size]="15" />
+          </button>
+          @if (headersOpen()) {
+            <div class="headers-body" id="ob-headers">
+              <p class="hint">{{ t('onboarding.ai.headers.text') }} <code>{{ envExample }}</code> {{ t('onboarding.ai.headers.env') }}</p>
+              @for (row of headers(); track row.id; let i = $index) {
+                <div class="header-row" [class.invalid]="headerErrors().has(row.id)">
+                  <input
+                    #hn
+                    class="name"
+                    type="text"
+                    spellcheck="false"
+                    autocomplete="off"
+                    [attr.aria-label]="t('onboarding.ai.headers.name')"
+                    [placeholder]="i === 0 ? 'X-Api-Key' : t('onboarding.ai.headers.name')"
+                    [value]="row.name"
+                    (input)="updateHeader(row.id, { name: hn.value })"
+                  />
+                  <div class="value">
+                    <input
+                      #hv
+                      [type]="row.revealed ? 'text' : 'password'"
+                      spellcheck="false"
+                      autocomplete="off"
+                      [attr.aria-label]="t('onboarding.ai.headers.value')"
+                      [placeholder]="t('onboarding.ai.headers.value')"
+                      [value]="row.value"
+                      (input)="updateHeader(row.id, { value: hv.value })"
+                    />
+                    <button
+                      class="icon-button"
+                      [attr.aria-label]="t(row.revealed ? 'onboarding.ai.headers.hide' : 'onboarding.ai.headers.show')"
+                      [title]="t(row.revealed ? 'onboarding.ai.headers.hide' : 'onboarding.ai.headers.show')"
+                      (click)="updateHeader(row.id, { revealed: !row.revealed })"
+                    >
+                      <sapia-icon [name]="row.revealed ? 'eye-off' : 'eye'" [size]="15" />
+                    </button>
+                  </div>
+                  <button class="icon-button remove" [attr.aria-label]="t('onboarding.ai.headers.remove')" [title]="t('onboarding.ai.headers.remove')" (click)="removeHeader(row.id)">
+                    <sapia-icon name="trash" [size]="15" />
+                  </button>
+                  @if (headerErrors().get(row.id); as error) {
+                    <small class="row-error"><sapia-icon name="alert" [size]="13" /> {{ error }}</small>
+                  }
+                </div>
+              }
+              <button class="add-header" (click)="addHeader()"><sapia-icon name="plus" [size]="14" /> {{ t('onboarding.ai.headers.add') }}</button>
+            </div>
+          }
+        </div>
+
         <div class="test" [attr.data-status]="test().status">
           <button class="text-button" [disabled]="!canConnect()" (click)="runTest()">
             @if (test().status === 'testing') {

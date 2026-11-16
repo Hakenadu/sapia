@@ -54,7 +54,9 @@ export class SettingsDialog {
     const provider = ai.enabled && ai.provider ? ai.providers[ai.provider] : null;
     if (!provider) return null;
     const type = this.sapia.bootstrap()?.aiProviderTypes.find((p) => p.id === provider.type)?.name ?? provider.type;
-    return `${type} · ${provider.model}`;
+    const headers = Object.keys(provider.headers ?? {}).length;
+    const extra = headers ? ` · ${headers === 1 ? this.t('settings.config.aiHeader') : this.t('settings.config.aiHeaders', { count: headers })}` : '';
+    return `${type} · ${provider.model}${extra}`;
   });
 
   protected showConfig(): void {

@@ -148,7 +148,11 @@ If the download fails, `sapia` says why and which of these settings helps.
     "maxSteps": 12,
     "providers": {
       "openai": { "type": "openai-responses", "model": "gpt-5", "apiKeyEnv": "OPENAI_API_KEY" },
-      "local":  { "type": "openai-chat", "model": "qwen3", "baseUrl": "http://localhost:11434/v1" }
+      "local":  { "type": "openai-chat", "model": "qwen3", "baseUrl": "http://localhost:11434/v1" },
+      "gateway": {
+        "type": "openai-chat", "model": "gpt-5", "baseUrl": "https://llm-gateway.example.com/v1",
+        "headers": { "X-Gateway-Key": "${env:GATEWAY_KEY}", "X-Team": "design" }
+      }
     }
   },
 
@@ -176,7 +180,11 @@ Two provider types are built in, both running through the [Vercel AI SDK](https:
 | `openai-responses` | OpenAI Responses API |
 | `openai-chat` | OpenAI Chat Completions, also spoken by most compatible servers (set `baseUrl`) |
 
-The key comes from `apiKey`, from the environment variable named in `apiKeyEnv`, or from `OPENAI_API_KEY`. It stays in the main process: the UI only receives a redacted config, and the model's tool calls are executed in the UI against the open workspace.
+The key comes from `apiKey`, from the environment variable named in `apiKeyEnv`, or from `OPENAI_API_KEY`.
+
+`headers` adds HTTP headers to every request to the provider: the model list, the connection test and all model calls. Gateways and proxies often want one, e.g. their own key or a tenant. A value can read an environment variable with `${env:NAME}`, and an `Authorization` header replaces the bearer token built from the API key. The first-run flow offers them under *Custom headers*.
+
+Keys and header values stay in the main process (the config file is written readable by the user only): the UI only receives a redacted config, and the model's tool calls are executed in the UI against the open workspace.
 
 Plugins can add provider types, see below.
 
