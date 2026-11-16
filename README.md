@@ -44,6 +44,17 @@ sapia
 
 On first start, Sapia asks for language and theme, optionally connects an AI provider (with a connection test) and writes `~/.sapia/config.json`. Diagrams are stored as files in `~/.sapia/diagrams`. Set `SAPIA_HOME` to use another directory.
 
+On the very first start, `sapia` downloads the Electron runtime (about 110 MB) into `~/.sapia/electron`; later starts use it directly. No install scripts are involved, so this also works with `--ignore-scripts` and with a global installation owned by root.
+
+Behind a company proxy:
+
+- The proxy comes from `HTTPS_PROXY` / `NO_PROXY`, or else from npm's own configuration (`npm config get https-proxy`).
+- If the proxy inspects TLS, Sapia retries with the operating system's certificates and npm's `cafile`. Otherwise point it to the company root certificate with `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
+- `ELECTRON_MIRROR=https://mirror.example.com/electron/` downloads from an internal mirror (Artifactory, Nexus, …) instead of GitHub.
+- `SAPIA_ELECTRON_PATH=/path/to/electron` uses an Electron binary you already have.
+
+If the download fails, `sapia` says why and which of these settings helps.
+
 ### Configuration (`~/.sapia/config.json`)
 
 ```jsonc
