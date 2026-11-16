@@ -1,21 +1,41 @@
+<img src="https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/logo.png" width="56" alt="Sapia logo">
+
 # Sapia Desktop
 
-A modern editor for text-based diagrams (PlantUML, Mermaid and more through plugins) with live preview, click-to-source, conversion between languages and a built-in AI assistant.
+A modern editor for text-based diagrams. Write PlantUML or Mermaid, see the diagram as you type, and ask the built-in AI assistant when you'd rather describe than write.
+
+![The AI assistant creating a class diagram](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/ai-assistant.gif)
 
 ```bash
 npm install -g @sapia/desktop
 sapia
 ```
 
-`sapia` returns as soon as the window is up; `sapia --wait` keeps the terminal attached and shows the log output.
+Requires Node.js 22 or newer. On first start Sapia asks for language and theme, optionally connects an AI provider and downloads the Electron runtime once (about 110 MB, into `~/.sapia/electron`). `sapia --wait` keeps the terminal attached and shows the log.
 
-Requires Node.js 22 or newer. On first start, Sapia guides you through language, theme and an optional AI provider and writes `~/.sapia/config.json`.
+## What you get
 
-The Electron runtime (about 110 MB) is downloaded into `~/.sapia/electron` on the very first start, without install scripts. Behind a company proxy, Sapia uses `HTTPS_PROXY`/`NO_PROXY` or npm's proxy settings and the operating system's certificates; `ELECTRON_MIRROR` selects an internal mirror. See the [full documentation](https://github.com/Hakenadu/sapia#sapia-desktop).
+- **Live rendering.** The preview is redrawn while you type, with pan, zoom, click-to-source and SVG/PNG export. PlantUML runs locally, no server or Java needed.
+- **Detection and completion.** Sapia recognises language and diagram type by itself and completes keywords, snippets and the names already used in your diagram, only where the syntax allows them.
+- **Errors where they happen.** Problems are underlined in the editor and listed under *Problems*; the preview keeps the last valid version.
+- **PlantUML and Mermaid built in**, and **Convert** turns sequence, class, state and mind map diagrams from one into the other.
+- **AI assistant** on `Ctrl/Cmd+K`: it creates, edits, checks and converts diagrams with the same tools you use. OpenAI and any OpenAI-compatible server (Ollama, LM Studio, vLLM, …) work out of the box; the API key never leaves the main process.
+- **Share links.** A diagram travels inside a `sapia://` link or a short code. Nothing is uploaded anywhere.
+- **Plugins** for more languages, from npm or a local folder. See the [Graphviz DOT example](https://github.com/Hakenadu/sapia/tree/main/examples/sapia-plugin-dot).
 
-- Configuration: `~/.sapia/config.json` (`SAPIA_HOME` changes the directory)
-- Diagrams: `~/.sapia/diagrams`
+| Live rendering, detection and completion | Conversion PlantUML → Mermaid |
+| --- | --- |
+| ![Live editing](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/live-editing.gif) | ![Conversion](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/convert.gif) |
+| **Errors in the editor** | **Share link and code** |
+| ![Errors](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/errors.png) | ![Share](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/share.png) |
+
+## Where things live
+
+- Configuration: `~/.sapia/config.json` (set `SAPIA_HOME` to use another directory). Every key is optional.
+- Diagrams: `~/.sapia/diagrams`, one file each.
 - Plugins: `npm install --prefix ~/.sapia/plugins <package>`, then add the package name to `"plugins"` in the config. Local folders work too.
-- AI: press `Ctrl/Cmd+K`. Providers are configured under `"ai"`; OpenAI Responses and OpenAI Chat Completions (including compatible servers) are built in.
+- AI: configured under `"ai"` in the config, or during the first start.
 
-Full documentation: https://github.com/Hakenadu/sapia#readme
+Behind a company proxy, Sapia uses `HTTPS_PROXY`/`NO_PROXY` or npm's proxy settings and the operating system's certificates; `ELECTRON_MIRROR` selects an internal mirror. Details: [Sapia Desktop](https://github.com/Hakenadu/sapia#sapia-desktop).
+
+[Full documentation](https://github.com/Hakenadu/sapia#readme) · MIT license
