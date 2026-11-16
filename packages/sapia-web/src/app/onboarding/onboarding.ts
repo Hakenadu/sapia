@@ -8,7 +8,13 @@ import { Icon } from '../ui/icon';
 import type { IconName } from '../ui/icon';
 import { Logo } from '../ui/logo';
 
-type TestState = { status: 'idle' } | { status: 'testing' } | { status: 'ok'; message: string } | { status: 'failed'; message: string };
+type TestState =
+  | { status: 'idle' }
+  | { status: 'testing' }
+  | { status: 'ok'; message: string }
+  | { status: 'failed'; message: string }
+  /** The endpoint answers but does not list the model: the user decides. */
+  | { status: 'unlisted'; models: string[] };
 
 /**
  * First-run flow of the desktop app: appearance, optional AI provider, then
@@ -97,12 +103,37 @@ export class Onboarding {
     try {
       const result = await host.ai.testProvider({ ...this.provider(), baseUrl: this.baseUrl().trim() || undefined });
       if (result.models?.length) this.models.set(result.models);
-      this.test.set(result.ok ? { status: 'ok', message: result.message || this.t('onboarding.ai.ok') } : { status: 'failed', message: result.message });
+      if (result.ok) this.test.set({ status: 'ok', message: result.message || this.t('onboarding.ai.ok') });
+      else if (result.reason === 'model-not-listed') this.test.set({ status: 'unlisted', models: this.closest(this.model(), result.models ?? []) });
+      else this.test.set({ status: 'failed', message: result.message });
       return result.ok;
     } catch (e) {
       this.test.set({ status: 'failed', message: e instanceof Error ? e.message : String(e) });
       return false;
     }
+  }
+
+  /** Up to six offered models, the ones most similar to what was typed first. */
+  private closest(wanted: string, models: string[]): string[] {
+    const w = wanted.toLowerCase();
+    const score = (id: string): number => {
+      const m = id.toLowerCase();
+      if (m.includes(w) || w.includes(m)) return 0;
+      let common = 0;
+      while (common < Math.min(m.length, w.length) && m[common] === w[common]) common++;
+      return 100 - common;
+    };
+    return [...models].sort((a, b) => score(a) - score(b) || a.localeCompare(b)).slice(0, 6);
+  }
+
+  protected pickModel(id: string): void {
+    this.model.set(id);
+    void this.runTest();
+  }
+
+  /** Saves a provider whose model the endpoint does not list, without further checks. */
+  protected async addAnyway(): Promise<void> {
+    await this.complete(this.provider());
   }
 
   /** Verifies the provider and, when it works, writes the config with it. */

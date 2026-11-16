@@ -418,6 +418,77 @@ h1 {
   }
 }
 
+.unlisted {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  background: var(--warning-soft);
+  animation: sapia-rise 0.25s var(--ease);
+}
+.unlisted-head {
+  display: flex;
+  gap: 10px;
+
+  sapia-icon {
+    flex: none;
+    margin-top: 1px;
+    color: var(--warning);
+  }
+  strong {
+    font-size: 13.5px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+  p {
+    margin: 4px 0 0;
+    color: var(--text-2);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+}
+.unlisted-caption {
+  display: block;
+  margin: 12px 0 6px 27px;
+  color: var(--text-3);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.unlisted-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 27px;
+}
+.model-chip {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+}
+.unlisted-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.text-button.warn {
+  border-color: transparent;
+  background: var(--warning);
+  color: light-dark(#fff, #1d1503);
+  font-weight: 620;
+}
+
 .success {
   display: grid;
   place-items: center;
