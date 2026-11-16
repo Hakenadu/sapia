@@ -10,4 +10,5 @@ export * from './storage/store';
 export * from './config/config';
 export * from './ai/ai';
 export * from './plugin/plugin';
+export * from './host/host';
 export * from './sapia';

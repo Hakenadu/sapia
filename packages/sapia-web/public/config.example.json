@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "locale": "auto",
+  "theme": "system",
+  "editor": { "fontSize": 14, "tabSize": 2, "lineNumbers": true, "wordWrap": false, "renderDelay": 250 },
+  "plugins": [],
+  "disabledPlugins": [],
+  "pluginOptions": {}
+}

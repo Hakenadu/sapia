@@ -101,7 +101,7 @@ const PALETTES: Record<RenderTheme, Record<string, string>> = {
 async function configure(theme: RenderTheme, options: MermaidOptions): Promise<Mermaid> {
   const mermaid = await loadMermaid();
   if (configuredFor !== theme) {
-    const fontFamily = options.fontFamily ?? '"Inter", ui-sans-serif, system-ui, sans-serif';
+    const fontFamily = options.fontFamily ?? '"Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif';
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',

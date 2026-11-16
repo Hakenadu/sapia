@@ -1,0 +1,103 @@
+<div class="glow" aria-hidden="true"></div>
+<div class="panel" role="dialog" [attr.aria-label]="t('ai.title')">
+  <header>
+    <span class="spark"><sapia-icon name="sparkles" [size]="15" /></span>
+    <span class="title">{{ t('ai.title') }}</span>
+    @if (providerLabel()) {
+      <span class="model">{{ providerLabel() }}</span>
+    }
+    <span class="spacer"></span>
+    @if (chat.messages().length) {
+      <button class="icon-button" (click)="chat.reset(); focus()" [matTooltip]="t('ai.newChat')" [attr.aria-label]="t('ai.newChat')">
+        <sapia-icon name="reset" [size]="15" />
+      </button>
+    }
+    <button class="icon-button" (click)="closed.emit()" [matTooltip]="t('action.close')" [attr.aria-label]="t('action.close')">
+      <sapia-icon name="close" [size]="15" />
+    </button>
+  </header>
+
+  @if (!chat.available()) {
+    <div class="unavailable">
+      <div class="glyph"><sapia-icon name="bot" [size]="24" [stroke]="1.5" /></div>
+      <h3>{{ t(sapia.host ? 'ai.unavailable.desktop.title' : 'ai.unavailable.web.title') }}</h3>
+      <p>{{ t(sapia.host ? 'ai.unavailable.desktop.text' : 'ai.unavailable.web.text') }}</p>
+    </div>
+  } @else {
+    @if (chat.messages().length) {
+      <div #scroller class="messages">
+        @for (message of chat.messages(); track message.id) {
+          <div class="message" [class.user]="message.role === 'user'">
+            @for (part of message.parts; track $index) {
+              @if (part.type === 'text') {
+                @if (message.role === 'user') {
+                  <div class="bubble">{{ part.text }}</div>
+                } @else {
+                  <div class="prose" [innerHTML]="html(part.text)"></div>
+                }
+              } @else {
+                <div class="tool" [class]="part.status" [class.mutating]="part.mutating" [matTooltip]="part.detail ?? ''">
+                  @switch (part.status) {
+                    @case ('running') {
+                      <sapia-icon class="spin" name="loader" [size]="13" />
+                    }
+                    @case ('done') {
+                      <sapia-icon name="check" [size]="13" />
+                    }
+                    @default {
+                      <sapia-icon name="alert" [size]="13" />
+                    }
+                  }
+                  <span>{{ toolLabel(part.name) }}</span>
+                </div>
+              }
+            }
+            @if (isThinking(message)) {
+              <div class="thinking"><span></span><span></span><span></span></div>
+            }
+            @if (message.error) {
+              <div class="error"><sapia-icon name="error" [size]="14" /> {{ t('ai.error', { message: message.error }) }}</div>
+            } @else if (message.stopped) {
+              <div class="stopped">{{ t('ai.stopped') }}</div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="intro">
+        <h3>{{ t('ai.empty.title') }}</h3>
+        <p>{{ t('ai.empty.text') }}</p>
+        <div class="suggestions">
+          @for (suggestion of suggestions(); track suggestion) {
+            <button (click)="submit(suggestion)"><sapia-icon name="wand" [size]="13" /> {{ suggestion }}</button>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="composer">
+      <textarea
+        #input
+        rows="1"
+        [placeholder]="t('ai.placeholder')"
+        [attr.aria-label]="t('ai.placeholder')"
+        (input)="onInput(input)"
+        (keydown)="onKeydown($event)"
+      ></textarea>
+      @if (chat.busy()) {
+        <button class="send stop" (click)="chat.stop()" [matTooltip]="t('ai.stop')" [attr.aria-label]="t('ai.stop')">
+          <sapia-icon name="stop" [size]="13" />
+        </button>
+      } @else {
+        <button class="send" [disabled]="!draft().trim()" (click)="submit()" [matTooltip]="t('ai.send')" [attr.aria-label]="t('ai.send')">
+          <sapia-icon name="arrow-up" [size]="16" [stroke]="2.4" />
+        </button>
+      }
+    </div>
+    <footer>
+      <span><kbd>↵</kbd> {{ t('ai.hint.send') }}</span>
+      <span><kbd>⇧</kbd><kbd>↵</kbd> {{ t('ai.hint.newline') }}</span>
+      <span><kbd>Esc</kbd> {{ t('ai.hint.close') }}</span>
+    </footer>
+  }
+</div>

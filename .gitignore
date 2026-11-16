@@ -7,3 +7,4 @@ release/
 .DS_Store
 coverage/
 *.log
+packages/sapia-web/vendor/

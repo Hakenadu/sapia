@@ -56,7 +56,7 @@ export const plantUmlPlugin = definePlugin({
       complete: (request) => completePlantUml(request, t),
       validate: (request) => validatePlantUml(request, t),
       symbols: (source) => plantUmlSymbols(source),
-      render: createRenderer({ engineBase }, t),
+      render: createRenderer({ engineBase, look: ctx.options['look'] === 'plantuml' ? 'plantuml' : 'sapia' }, t),
       locate: locatePlantUml,
     };
     ctx.languages.register(language);

@@ -1,0 +1,63 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { MatDialogRef } from '@angular/material/dialog';
+import { formatBinding } from '../core/keys';
+import { I18nService } from '../core/i18n.service';
+import { SapiaService } from '../core/sapia.service';
+import { Icon } from '../ui/icon';
+import { LanguageBadge } from '../ui/language-badge';
+
+type Tab = 'plugins' | 'languages' | 'shortcuts' | 'config';
+
+/** Read-only overview of plugins, languages, shortcuts and the configuration source. */
+@Component({
+  selector: 'sapia-settings-dialog',
+  imports: [Icon, LanguageBadge],
+  templateUrl: './settings-dialog.html',
+  styleUrl: './settings-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SettingsDialog {
+  protected readonly ref = inject<MatDialogRef<SettingsDialog>>(MatDialogRef);
+  protected readonly i18n = inject(I18nService);
+  protected readonly sapia = inject(SapiaService);
+  protected readonly t = this.i18n.t;
+
+  protected readonly tabs: Tab[] = ['plugins', 'languages', 'shortcuts', 'config'];
+  protected readonly tab = signal<Tab>('plugins');
+
+  protected readonly languages = computed(() => {
+    this.sapia.registryVersion();
+    const { languages, conversion } = this.sapia.core;
+    return languages.all().map((l) => ({
+      id: l.id,
+      name: l.name,
+      types: l.diagramTypes.map((type) => ({ id: type.id, convertible: conversion.targetsFor(l.id, type.id).length > 0 })),
+    }));
+  });
+
+  protected readonly shortcuts = computed(() => {
+    const keys = this.sapia.config().keybindings;
+    return [
+      { label: 'shortcut.ai', keys: formatBinding(keys.aiAssistant) },
+      { label: 'shortcut.save', keys: formatBinding(keys.save) },
+      { label: 'shortcut.new', keys: formatBinding(keys.newDiagram) },
+      { label: 'shortcut.library', keys: formatBinding(keys.openLibrary) },
+      { label: 'shortcut.convert', keys: formatBinding(keys.convert) },
+      { label: 'shortcut.complete', keys: formatBinding('Ctrl-Space') },
+      { label: 'shortcut.search', keys: formatBinding('Mod-f') },
+      { label: 'shortcut.comment', keys: formatBinding('Mod-/') },
+    ];
+  });
+
+  protected readonly aiProvider = computed(() => {
+    const ai = this.sapia.config().ai;
+    const provider = ai.enabled && ai.provider ? ai.providers[ai.provider] : null;
+    if (!provider) return null;
+    const type = this.sapia.bootstrap()?.aiProviderTypes.find((p) => p.id === provider.type)?.name ?? provider.type;
+    return `${type} · ${provider.model}`;
+  });
+
+  protected showConfig(): void {
+    void this.sapia.host?.showConfigFile();
+  }
+}

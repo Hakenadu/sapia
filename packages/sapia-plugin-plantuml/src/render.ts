@@ -17,7 +17,74 @@ interface PlantUmlEngine {
 export interface EngineOptions {
   /** Absolute or document-relative URL of the directory holding the `@plantuml/core` files. */
   engineBase: string;
+  /**
+   * `sapia` (default) gives diagrams without styling of their own a look that
+   * matches the editor in light and dark mode; `plantuml` keeps PlantUML's defaults.
+   */
+  look?: 'sapia' | 'plantuml';
 }
+
+interface Palette {
+  text: string;
+  line: string;
+  fill: string;
+  arrow: string;
+  noteFill: string;
+  noteLine: string;
+  groupFill: string;
+}
+
+const PALETTES: Record<'light' | 'dark', Palette> = {
+  light: { text: '#151821', line: '#6f61ee', fill: '#f3f1ff', arrow: '#535b70', noteFill: '#fff7dd', noteLine: '#d6a43a', groupFill: '#e9e6ff' },
+  dark: { text: '#e9ebf3', line: '#9d91ff', fill: '#1d1b3a', arrow: '#a3abbe', noteFill: '#2c2613', noteLine: '#c79a3c', groupFill: '#2a2752' },
+};
+
+/** Style lines injected after the start tag. Kept free of blank lines so offsets stay predictable. */
+export function sapiaStyle(theme: 'light' | 'dark'): string[] {
+  const p = PALETTES[theme];
+  return [
+    '<style>',
+    'root {',
+    '  FontName Inter Variable, Inter, sans-serif',
+    `  FontColor ${p.text}`,
+    `  LineColor ${p.line}`,
+    `  BackgroundColor ${p.fill}`,
+    '  LineThickness 1.2',
+    '  RoundCorner 10',
+    '  Shadowing 0',
+    '}',
+    'document {',
+    '  BackgroundColor transparent',
+    '}',
+    'arrow {',
+    `  LineColor ${p.arrow}`,
+    '  LineThickness 1.2',
+    '}',
+    'note {',
+    `  BackgroundColor ${p.noteFill}`,
+    `  LineColor ${p.noteLine}`,
+    '}',
+    'group {',
+    `  LineColor ${p.arrow}`,
+    '  BackgroundColor transparent',
+    '}',
+    'groupHeader {',
+    `  BackgroundColor ${p.groupFill}`,
+    `  LineColor ${p.arrow}`,
+    '}',
+    'title {',
+    '  FontSize 17',
+    '}',
+    '</style>',
+  ];
+}
+
+/** Diagrams that bring their own styling are left alone. */
+function hasOwnStyling(source: string): boolean {
+  return /^\s*(?:!theme\b|skinparam\b|<style>|skin\s+\w+|!include\b|!pragma\b)/im.test(source);
+}
+
+const STYLABLE_START = /^\s*@start(?:uml|mindmap|wbs)\b.*$/m;
 
 let enginePromise: Promise<PlantUmlEngine> | null = null;
 
@@ -87,29 +154,38 @@ export function createRenderer(options: EngineOptions, t: Translate) {
     let source = request.source;
     // The engine needs the start/end tags that PlantUML tools traditionally add implicitly.
     if (!/^\s*@start\w+/m.test(source)) source = `@startuml\n${source}\n@enduml`;
-    const wrapped = source !== request.source;
+    let shift = source !== request.source ? 1 : 0;
+    let themed = false;
+    const start = STYLABLE_START.exec(source);
+    if ((options.look ?? 'sapia') === 'sapia' && start && !hasOwnStyling(source)) {
+      const style = sapiaStyle(request.theme === 'dark' ? 'dark' : 'light');
+      const end = start.index + start[0].length;
+      source = `${source.slice(0, end)}\n${style.join('\n')}${source.slice(end)}`;
+      shift += style.length;
+      themed = true;
+    }
 
     const svg = await new Promise<string>((resolve, reject) => {
       engine.renderToString(
         source.split(/\r\n|\r|\n/),
         resolve,
         (message) => reject(new Error(t('plantuml.error.engine', { message: String(message) }))),
-        { dark: request.theme === 'dark', maxSvgSize: 0 },
+        { dark: !themed && request.theme === 'dark', maxSvgSize: 0 },
       );
     });
     if (request.signal?.aborted) return {};
 
     const error = parseErrorSvg(svg, source, t);
     if (error) {
-      if (wrapped) {
-        // Shift the diagnostic back by the injected `@startuml` line.
+      if (shift) {
+        // Shift the diagnostic back by the injected lines.
         const index = new LineIndex(request.source);
-        const line = Math.max(0, new LineIndex(source).positionAt(error.from).line - 1);
+        const line = Math.max(0, new LineIndex(source).positionAt(error.from).line - shift);
         Object.assign(error, index.lineRange(Math.min(line, index.lineCount - 1), true));
       }
       return { diagnostics: [error] };
     }
-    return { svg: wrapped ? shiftSourceLines(postProcess(svg), -1) : postProcess(svg) };
+    return { svg: shift ? shiftSourceLines(postProcess(svg), -shift) : postProcess(svg) };
   };
 }
 
