@@ -1,0 +1,30 @@
+{
+  "name": "sapia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sapia – a modern editor for text-based diagrams (PlantUML, Mermaid, and more via plugins).",
+  "license": "MIT",
+  "workspaces": [
+    "packages/sapia-core",
+    "packages/sapia-plugin-plantuml",
+    "packages/sapia-plugin-mermaid",
+    "packages/sapia-web",
+    "packages/sapia-desktop"
+  ],
+  "scripts": {
+    "start": "npm run start -w sapia-web",
+    "start:desktop": "npm run start -w sapia-desktop",
+    "build": "npm run build:libs && npm run build -w sapia-web && npm run build -w sapia-desktop",
+    "build:libs": "npm run build -w @sapia/core && npm run build -w @sapia/plugin-plantuml -w @sapia/plugin-mermaid",
+    "build:web": "npm run build -w sapia-web",
+    "test": "vitest run",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
