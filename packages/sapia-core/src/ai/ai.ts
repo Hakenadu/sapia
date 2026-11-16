@@ -113,6 +113,11 @@ export interface AiChatHandlers {
  */
 export interface AiBackend {
   chat(request: AiChatRequest, handlers: AiChatHandlers, signal?: AbortSignal): Promise<void>;
+  /**
+   * Stops the running request of a session. Use this where an `AbortSignal`
+   * cannot cross a process boundary (e.g. the desktop preload bridge).
+   */
+  abort(sessionId: string): Promise<void>;
   /** Drops the stored history of a session. */
   reset(sessionId: string): Promise<void>;
 }

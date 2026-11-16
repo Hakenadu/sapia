@@ -126,7 +126,9 @@ export class AiChatService {
   }
 
   stop(): void {
-    this.controller?.abort();
+    if (!this.controller) return;
+    this.controller.abort();
+    void this.sapia.host?.ai.abort(this.sessionId);
   }
 
   reset(): void {

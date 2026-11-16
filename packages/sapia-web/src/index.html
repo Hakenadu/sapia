@@ -8,13 +8,8 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Sapia – a modern editor for text-based diagrams." />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <script>
-      // Apply the stored theme before first paint to avoid a flash.
-      try {
-        var t = localStorage.getItem('sapia.theme');
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-      } catch (e) {}
-    </script>
+    <!-- Applies the stored theme before first paint. A file, not inline, so a strict CSP can be used. -->
+    <script src="theme-init.js"></script>
   </head>
   <body>
     <sapia-root></sapia-root>

@@ -13,8 +13,8 @@
   ],
   "scripts": {
     "start": "npm run start -w sapia-web",
-    "start:desktop": "npm run start -w sapia-desktop",
-    "build": "npm run build:libs && npm run build -w sapia-web && npm run build -w sapia-desktop",
+    "start:desktop": "npm run start -w @sapia/desktop",
+    "build": "npm run build:libs && npm run build -w sapia-web && npm run build -w @sapia/desktop",
     "build:libs": "npm run build -w @sapia/core && npm run build -w @sapia/plugin-plantuml -w @sapia/plugin-mermaid",
     "build:web": "npm run build -w sapia-web",
     "test": "vitest run",
