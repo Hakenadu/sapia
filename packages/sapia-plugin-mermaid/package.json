@@ -1,22 +1,53 @@
 {
   "name": "@sapia/plugin-mermaid",
-  "version": "0.1.0",
+  "version": "0.1.1-snapshot.0",
   "description": "Mermaid language support for Sapia: detection, highlighting, completion, validation, rendering and metamodel converters.",
   "license": "MIT",
+  "keywords": [
+    "sapia",
+    "sapia-plugin",
+    "mermaid",
+    "diagram"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hakenadu/sapia.git",
+    "directory": "packages/sapia-plugin-mermaid"
+  },
+  "homepage": "https://github.com/Hakenadu/sapia#readme",
+  "bugs": {
+    "url": "https://github.com/Hakenadu/sapia/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
-  "sapia": { "plugin": "./dist/index.js" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sapia": {
+    "plugin": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "mermaid": "^12.3.0"
   },
   "peerDependencies": {
-    "@sapia/core": "^0.1.0"
+    "@sapia/core": "^0.1.1-snapshot.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
