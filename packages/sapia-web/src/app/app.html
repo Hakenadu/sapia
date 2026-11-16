@@ -103,6 +103,10 @@
         </span>
       </button>
 
+      <button class="icon-button share-button" (click)="share()" [matTooltip]="t('share.action')" [attr.aria-label]="t('share.action')">
+        <sapia-icon name="share" [size]="16" />
+      </button>
+
       <button class="text-button primary" (click)="save()" [disabled]="ws.isSaved()" [matTooltip]="t('action.save') + '  ' + keys().save">
         <sapia-icon name="save" [size]="15" />
         <span class="wide-only">{{ t('action.save') }}</span>
@@ -234,6 +238,8 @@
 <mat-menu #moreMenu="matMenu" xPosition="before">
   <button mat-menu-item (click)="duplicate()"><sapia-icon name="copy" /> <span class="menu-label">{{ t('action.duplicate') }}</span></button>
   <button mat-menu-item (click)="copySource()"><sapia-icon name="copy" /> <span class="menu-label">{{ t('action.copySource') }}</span></button>
+  <button mat-menu-item (click)="share()"><sapia-icon name="share" /> <span class="menu-label">{{ t('share.action') }}</span></button>
+  <button mat-menu-item (click)="openLinkDialog()"><sapia-icon name="link" /> <span class="menu-label">{{ t('share.open') }}</span></button>
   <button mat-menu-item class="danger" [disabled]="!canDelete()" (click)="remove()"><sapia-icon name="trash" /> <span class="menu-label">{{ t('action.delete') }}</span></button>
 </mat-menu>
 

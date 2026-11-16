@@ -74,4 +74,9 @@ export interface SapiaHost {
   /** Reveals the config file in the system file manager. */
   showConfigFile(): Promise<void>;
   openExternal(url: string): Promise<void>;
+  /**
+   * Share links (`sapia://open/#d=…`) the operating system handed to the
+   * app. The handler also receives a link that started the app.
+   */
+  onOpenLink(handler: (link: string) => void): void;
 }

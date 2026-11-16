@@ -173,6 +173,13 @@ export class WorkspaceService {
     this.open(null, this.i18n.t('doc.untitled'), '', null);
   }
 
+  /** Opens a diagram received through a share link as a new, unsaved document. */
+  openShared(name: string, source: string): void {
+    this.open(null, name, source, null);
+    // Unlike a template it is not in the library yet: treat it as unsaved work.
+    this.savedSource.set(null);
+  }
+
   newFromTemplate(languageId: string, diagramType: string): boolean {
     const language = this.sapia.core.languages.get(languageId);
     const template = language?.diagramTypes.find((t) => t.id === diagramType)?.template;
