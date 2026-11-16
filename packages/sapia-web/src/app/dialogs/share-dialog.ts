@@ -6,10 +6,10 @@ import { I18nService } from '../core/i18n.service';
 import { Icon } from '../ui/icon';
 
 export type ShareDialogData =
-  | { mode: 'share'; name: string; link: string; desktopLink: boolean }
+  | { mode: 'share'; name: string; link: string; code: string; desktopLink: boolean }
   | { mode: 'open'; error?: string };
 
-/** Shows a share link, or asks for one to open (the result is the pasted link). */
+/** Shows a share link and code, or asks for one to import (the result is the pasted text). */
 @Component({
   selector: 'sapia-share-dialog',
   imports: [Icon],
@@ -23,21 +23,37 @@ export type ShareDialogData =
     </header>
 
     @if (data.mode === 'share') {
-      <div class="link-row">
-        <input #field class="link" readonly [value]="data.link" (focus)="field.select()" [attr.aria-label]="t('share.title')" />
-        <button class="text-button primary" (click)="copy()">
-          <sapia-icon [name]="copied() ? 'check' : 'copy'" [size]="15" />
-          {{ t(copied() ? 'share.copied' : 'share.copy') }}
-        </button>
-      </div>
+      <section>
+        <div class="label">
+          <span>{{ t('share.link') }}</span>
+          <small>{{ t(data.desktopLink ? 'share.linkDesktop' : 'share.linkWeb') }}</small>
+        </div>
+        <div class="link-row">
+          <input #field class="link" readonly [value]="data.link" (focus)="field.select()" [attr.aria-label]="t('share.link')" />
+          <button class="text-button primary" (click)="copy('link')">
+            <sapia-icon [name]="copied() === 'link' ? 'check' : 'copy'" [size]="15" />
+            {{ t(copied() === 'link' ? 'share.copied' : 'share.copy') }}
+          </button>
+        </div>
+      </section>
+      <section>
+        <div class="label">
+          <span>{{ t('share.code') }}</span>
+          <small>{{ t('share.codeHint') }}</small>
+        </div>
+        <div class="link-row">
+          <input #codeField class="link" readonly [value]="data.code" (focus)="codeField.select()" [attr.aria-label]="t('share.code')" />
+          <button class="text-button" (click)="copy('code')">
+            <sapia-icon [name]="copied() === 'code' ? 'check' : 'copy'" [size]="15" />
+            {{ t(copied() === 'code' ? 'share.codeCopied' : 'share.copyCode') }}
+          </button>
+        </div>
+      </section>
       <div class="meta">
         <span>{{ t('share.length', { count: data.link.length.toLocaleString(i18n.locale()) }) }}</span>
       </div>
       @if (long()) {
         <p class="note warn"><sapia-icon name="alert" [size]="14" /> {{ t('share.long') }}</p>
-      }
-      @if (data.desktopLink) {
-        <p class="note"><sapia-icon name="info" [size]="14" /> {{ t('share.desktopHint') }}</p>
       }
       <div class="actions">
         <button class="text-button ghost" (click)="ref.close()">{{ t('action.close') }}</button>
@@ -47,7 +63,7 @@ export type ShareDialogData =
         #field
         class="link paste"
         spellcheck="false"
-        placeholder="https://…/#d=…"
+        placeholder="sapia1.…  ·  https://…/#d=…  ·  sapia://open/#d=…"
         [value]="pasted()"
         (input)="pasted.set(field.value); error.set(null)"
         (keydown.enter)="open()"
@@ -96,9 +112,31 @@ export type ShareDialogData =
       font-size: 13px;
       line-height: 1.5;
     }
+    section + section {
+      margin-top: 16px;
+    }
+    .label {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 7px;
+      span {
+        color: var(--text-2);
+        font-size: 12px;
+        font-weight: 620;
+      }
+      small {
+        color: var(--text-3);
+        font-size: 12px;
+      }
+    }
     .link-row {
       display: flex;
       gap: 8px;
+    }
+    .link-row .text-button {
+      min-width: 132px;
+      justify-content: center;
     }
     .link {
       flex: 1;
@@ -176,8 +214,9 @@ export class ShareDialog implements AfterViewInit {
   protected readonly i18n = inject(I18nService);
   protected readonly t = this.i18n.t;
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
+  private readonly codeField = viewChild<ElementRef<HTMLInputElement>>('codeField');
 
-  protected readonly copied = signal(false);
+  protected readonly copied = signal<'link' | 'code' | null>(null);
   protected readonly pasted = signal('');
   protected readonly error = signal<string | null>(this.data.mode === 'open' ? (this.data.error ?? null) : null);
   protected readonly long = computed(() => this.data.mode === 'share' && this.data.link.length > SHARE_LINK_SOFT_LIMIT);
@@ -189,16 +228,17 @@ export class ShareDialog implements AfterViewInit {
     if (this.data.mode === 'share') field.select();
   }
 
-  protected async copy(): Promise<void> {
+  protected async copy(what: 'link' | 'code'): Promise<void> {
     if (this.data.mode !== 'share') return;
+    const text = what === 'link' ? this.data.link : this.data.code;
     try {
-      await navigator.clipboard.writeText(this.data.link);
+      await navigator.clipboard.writeText(text);
     } catch {
-      this.field()?.nativeElement.select();
+      (what === 'link' ? this.field() : this.codeField())?.nativeElement.select();
       document.execCommand('copy');
     }
-    this.copied.set(true);
-    setTimeout(() => this.copied.set(false), 1800);
+    this.copied.set(what);
+    setTimeout(() => this.copied.set(null), 1800);
   }
 
   protected open(): void {

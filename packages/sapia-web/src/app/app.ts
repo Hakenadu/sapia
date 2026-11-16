@@ -3,7 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ConversionError, DESKTOP_SHARE_BASE, LineIndex, ShareError, createShareLink, decodeSharedDiagram, sharePayloadFrom } from '@sapia/core';
+import { ConversionError, DESKTOP_SHARE_BASE, LineIndex, ShareError, createShareCode, createShareLink, decodeSharedDiagram, sharePayloadFrom } from '@sapia/core';
 import type { DiagramThemeMode, Diagnostic, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
 import { firstValueFrom } from 'rxjs';
 import { AiWidget } from './ai/ai-widget';
@@ -135,18 +135,13 @@ export class App {
   }
 
   // -- sharing -------------------------------------------------------------------
-  /** Where share links point: a configured web deployment, this web app, or the desktop app itself. */
-  private shareBase(): { base: string; desktop: boolean } {
-    const configured = this.sapia.config().shareBaseUrl;
-    if (configured) return { base: configured, desktop: false };
-    if (this.sapia.host) return { base: DESKTOP_SHARE_BASE, desktop: true };
-    return { base: location.href.split('#')[0], desktop: false };
-  }
-
   protected async share(): Promise<void> {
-    const { base, desktop } = this.shareBase();
-    const link = await createShareLink({ name: this.ws.name(), source: this.ws.source() }, base);
-    this.dialog.open<ShareDialog, ShareDialogData>(ShareDialog, { data: { mode: 'share', name: this.ws.name(), link, desktopLink: desktop } });
+    const diagram = { name: this.ws.name(), source: this.ws.source() };
+    // The desktop app shares sapia:// links it opens itself; the web app links to its own address.
+    const desktop = !!this.sapia.host;
+    const base = desktop ? DESKTOP_SHARE_BASE : location.href.split('#')[0];
+    const [link, code] = await Promise.all([createShareLink(diagram, base), createShareCode(diagram)]);
+    this.dialog.open<ShareDialog, ShareDialogData>(ShareDialog, { data: { mode: 'share', name: diagram.name, link, code, desktopLink: desktop } });
   }
 
   protected async openLinkDialog(error?: string): Promise<void> {

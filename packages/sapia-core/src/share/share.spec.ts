@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DESKTOP_SHARE_BASE, ShareError, createShareLink, decodeSharedDiagram, encodeSharedDiagram, normalizeConfig, normalizeShareBase, sharePayloadFrom } from '../index';
+import { DESKTOP_SHARE_BASE, ShareError, createShareCode, createShareLink, decodeSharedDiagram, encodeSharedDiagram, sharePayloadFrom } from '../index';
 
 const diagram = { name: 'Code Interpreter – Übersicht', source: '@startuml\nAlice -> Bob: Grüße 👋\n' + 'Bob --> Alice: ok\n'.repeat(200) + '@enduml\n' };
 
@@ -36,10 +36,11 @@ describe('sharing', () => {
     await expect(decodeSharedDiagram(future)).rejects.toMatchObject({ reason: 'version' });
   });
 
-  it('validates the configured share base', () => {
-    expect(normalizeShareBase('https://sapia.example.com')).toBe('https://sapia.example.com/');
-    expect(normalizeShareBase('ftp://x')).toBeNull();
-    expect(normalizeConfig({ shareBaseUrl: 'https://sapia.example.com/#x' }).config.shareBaseUrl).toBe('https://sapia.example.com/');
-    expect(normalizeConfig({ shareBaseUrl: 'nope' }).issues).toEqual(['shareBaseUrl must be an http(s) URL']);
+  it('creates codes that survive line breaks inserted by chat tools', async () => {
+    const code = await createShareCode(diagram);
+    expect(code.startsWith('sapia1.')).toBe(true);
+    const wrapped = code.replace(/(.{60})/g, '$1\n  ');
+    expect(await decodeSharedDiagram(sharePayloadFrom(wrapped)!)).toEqual(diagram);
+    expect(sharePayloadFrom('sapia1.not valid!')).toBeNull();
   });
 });

@@ -37,12 +37,13 @@ npm run build        # libraries, web app and desktop bundle
 
 ## Sharing diagrams
 
-**Share** (top bar) creates a link that contains the whole diagram, compressed, in the URL fragment: `https://sapia.example.com/#d=…`. Browsers never send the fragment to the server, so no diagram is stored or transmitted anywhere except in the link itself. Opening the link loads the diagram as a new, unsaved document and removes it from the address bar.
+**Share** (top bar) packs the whole diagram, compressed, into a link and into a code. Nothing is stored or sent anywhere: the diagram lives only in the link or code itself.
 
-- The web app links to its own address. Set `shareBaseUrl` to point links at another deployment.
-- The desktop app links to `shareBaseUrl` when configured. Without it, it creates `sapia://open/#d=…` links. It registers the `sapia:` scheme with the operating system so that these links open the app.
-- **Open link** (⋯ menu) accepts any share link, https or `sapia://`, for systems where the scheme cannot be registered.
-- Very long links (over 8000 characters) can get cut off by chat tools or mail clients. The share dialog warns about that.
+- **Web app:** the link points to the app's own address with the diagram in the URL fragment, `https://…/#d=…`. Browsers never send the fragment to the server. Opening the link loads the diagram as a new, unsaved document and removes it from the address bar.
+- **Desktop app:** the link is `sapia://open/#d=…`. The app registers the `sapia:` scheme with the operating system, so clicking such a link opens the diagram in Sapia.
+- **Code:** both apps also offer a share code, `sapia1.…`, which carries the same content without any address. It works between web and desktop and survives tools that mangle links.
+- **Import** (⋯ menu) accepts a code or any share link, https or `sapia://`.
+- Very long links (over 8000 characters) can get cut off by chat tools or mail clients. The share dialog warns about that; the code is the safer choice then.
 
 ## Sapia Desktop
 
@@ -72,7 +73,6 @@ If the download fails, `sapia` says why and which of these settings helps.
   "locale": "auto",            // "auto", "en" or "de"; unknown locales fall back to English
   "theme": "system",           // "system", "light" or "dark"
   "diagramTheme": "adaptive",  // "adaptive": diagram colours follow light/dark mode; "static": always the light look
-  "shareBaseUrl": "https://sapia.example.com/", // web deployment that share links point to (desktop default: sapia:// links)
   "editor": { "fontSize": 14, "tabSize": 2, "lineNumbers": true, "wordWrap": false, "renderDelay": 250 },
 
   "plugins": [
