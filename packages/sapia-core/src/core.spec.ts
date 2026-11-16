@@ -14,6 +14,9 @@ import {
   normalizeConfig,
   pluginFromModule,
   redactConfig,
+  isValidHeaderName,
+  isValidHeaderValue,
+  resolveHeaderValue,
   resolveLocale,
   resolvePluginReference,
   toIdentifier,
@@ -130,9 +133,25 @@ describe('config', () => {
     expect(resolvePluginReference({ package: 'p', enabled: false })?.enabled).toBe(false);
   });
   it('redacts secrets', () => {
-    const { config } = normalizeConfig({ ai: { providers: { a: { type: 'openai-chat', model: 'm', apiKey: 'sk-secret' } } } });
-    expect(JSON.stringify(redactConfig(config))).not.toContain('sk-secret');
+    const { config } = normalizeConfig({ ai: { providers: { a: { type: 'openai-chat', model: 'm', apiKey: 'sk-secret', headers: { 'X-Token': 'hdr-secret' } } } } });
+    const redacted = redactConfig(config);
+    expect(JSON.stringify(redacted)).not.toContain('sk-secret');
+    expect(JSON.stringify(redacted)).not.toContain('hdr-secret');
+    expect(Object.keys(redacted.ai.providers['a'].headers!)).toEqual(['X-Token']);
     expect(config.ai.providers['a'].apiKey).toBe('sk-secret');
+    expect(config.ai.providers['a'].headers).toEqual({ 'X-Token': 'hdr-secret' });
+  });
+  it('validates custom provider headers and expands environment references', () => {
+    const { config, issues } = normalizeConfig({
+      ai: { providers: { a: { type: 'openai-chat', model: 'm', headers: { 'X-Ok': 'v', 'bad name': 'v', 'X-Num': 1, 'X-Break': 'a\r\nb' } } } },
+    });
+    expect(config.ai.providers['a'].headers).toEqual({ 'X-Ok': 'v' });
+    expect(issues).toHaveLength(3);
+    expect(isValidHeaderName('X-Api-Key')).toBe(true);
+    expect(isValidHeaderName('X Api')).toBe(false);
+    expect(isValidHeaderValue('a\tb')).toBe(true);
+    expect(isValidHeaderValue('a\nb')).toBe(false);
+    expect(resolveHeaderValue('Bearer ${env:T}-${env:MISSING}', { T: 'x' })).toBe('Bearer x-');
   });
 });
 

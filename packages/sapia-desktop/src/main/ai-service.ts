@@ -1,7 +1,7 @@
 import type { AiBackend, AiChatHandlers, AiChatRequest, AiProviderConfig, ProviderTestResult, SapiaConfig } from '@sapia/core';
 import { dynamicTool, generateText, isStepCount, jsonSchema, streamText } from 'ai';
 import type { ModelMessage, ToolSet } from 'ai';
-import { resolveApiKey } from './providers';
+import { resolveApiKey, resolveHeaders } from './providers';
 import type { AiProviderRegistry } from './providers';
 
 export interface AiServiceOptions {
@@ -42,7 +42,7 @@ export class AiService implements AiBackend {
       const known = this.options.providers.types().map((t) => t.id).join(', ');
       throw new Error(`Unknown AI provider type "${provider.type}". Available: ${known}`);
     }
-    const context = { config: provider, apiKey: resolveApiKey(provider, factory.info, this.env) };
+    const context = { config: provider, apiKey: resolveApiKey(provider, factory.info, this.env), headers: resolveHeaders(provider, this.env) };
     return { factory, context, model: await factory.createModel(context) };
   }
 

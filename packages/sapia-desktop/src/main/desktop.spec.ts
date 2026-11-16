@@ -222,18 +222,21 @@ describe('static protocol', () => {
 describe('HostService with a fake OpenAI compatible server', () => {
   let server: Server;
   let baseUrl: string;
-  const requests: { url: string; auth?: string; body: any }[] = [];
+  const requests: { url: string; auth?: string; gateway?: string; body: any }[] = [];
 
   beforeAll(async () => {
     server = createServer(async (req, res) => {
       let text = '';
       for await (const chunk of req) text += chunk;
       const body = text ? JSON.parse(text) : null;
-      requests.push({ url: req.url ?? '', auth: req.headers.authorization, body });
+      const gateway = req.headers['x-gateway-key'] as string | undefined;
+      requests.push({ url: req.url ?? '', auth: req.headers.authorization, gateway, body });
       const json = (status: number, value: unknown) => {
         res.writeHead(status, { 'content-type': 'application/json' });
         res.end(JSON.stringify(value));
       };
+      // A gateway may stand in front of the endpoint and want its own header.
+      if (gateway !== undefined && gateway !== 'gw-secret') return json(403, { error: { message: 'Gateway key rejected' } });
       if (req.headers.authorization !== 'Bearer sk-good') return json(401, { error: { message: 'Incorrect API key provided' } });
       if (req.url === '/v1/models') return json(200, { data: [{ id: 'model-a' }, { id: 'model-b' }] });
       if (req.url !== '/v1/chat/completions') return json(404, { error: { message: 'not found' } });
@@ -341,6 +344,29 @@ describe('HostService with a fake OpenAI compatible server', () => {
     requests.length = 0;
     await host.ai.chat({ sessionId: 's1', message: 'again', system: 'You are a test.', tools: [] }, { onEvent: () => undefined, executeTool: async () => null });
     expect(requests[0].body.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user']);
+  });
+
+  it('sends custom headers with the model list, the connection test and every model call', async () => {
+    const env = { GATEWAY_KEY: 'gw-secret', TOKEN: 'sk-good' };
+    const headers = { 'X-Gateway-Key': '${env:GATEWAY_KEY}', authorization: 'Bearer ${env:TOKEN}' };
+    const host = await hostWith({ ai: { provider: 'gw', providers: { gw: { type: 'openai-chat', model: 'model-a', baseUrl, apiKey: 'sk-bad', headers } } } }, env);
+    expect(JSON.stringify(host.bootstrap())).not.toContain('gw-secret');
+
+    const result = await host.ai.testProvider({ type: 'openai-chat', model: 'model-a', baseUrl, headers });
+    expect(result).toMatchObject({ ok: true, models: ['model-a', 'model-b'] });
+    expect(requests.map((r) => r.url)).toEqual(['/v1/models', '/v1/chat/completions']);
+    // The custom authorization header replaces the bearer token instead of joining it.
+    expect(requests.every((r) => r.gateway === 'gw-secret' && r.auth === 'Bearer sk-good')).toBe(true);
+
+    requests.length = 0;
+    const events: AiStreamEvent[] = [];
+    await host.ai.chat({ sessionId: 'gw', message: 'hi', system: '', tools: [] }, { onEvent: (e) => events.push(e), executeTool: async () => null });
+    expect(events.some((e) => e.type === 'error')).toBe(false);
+    expect(requests[0]).toMatchObject({ gateway: 'gw-secret', auth: 'Bearer sk-good' });
+
+    const rejected = await host.ai.testProvider({ type: 'openai-chat', model: 'model-a', baseUrl, apiKey: 'sk-good', headers: { 'X-Gateway-Key': 'wrong' } });
+    expect(rejected).toMatchObject({ ok: false });
+    expect(rejected.message).toContain('Gateway key rejected');
   });
 
   it('reports provider errors as an error event', async () => {

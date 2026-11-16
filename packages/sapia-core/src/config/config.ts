@@ -68,6 +68,11 @@ export interface AiProviderConfig {
   apiKey?: string;
   /** Name of an environment variable holding the API key (preferred over `apiKey`). */
   apiKeyEnv?: string;
+  /**
+   * Extra HTTP headers sent with every request to the provider (model list,
+   * connection test and model calls), e.g. for gateways and proxies. A value
+   * may reference environment variables as `${env:NAME}`.
+   */
   headers?: Record<string, string>;
   /** Provider specific extras. */
   options?: Record<string, unknown>;
@@ -145,6 +150,41 @@ export interface NormalizedConfig {
 
 type Dict = Record<string, unknown>;
 const isDict = (v: unknown): v is Dict => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** HTTP header names are RFC 9110 tokens. */
+export function isValidHeaderName(name: string): boolean {
+  return /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name);
+}
+
+/** HTTP header values must not contain line breaks or other control characters (tab allowed). */
+export function isValidHeaderValue(value: string): boolean {
+  // eslint-disable-next-line no-control-regex
+  return !/[\u0000-\u0008\u000a-\u001f\u007f]/.test(value);
+}
+
+function normalizeHeaders(raw: unknown, path: string, issues: string[]): Record<string, string> | undefined {
+  if (raw === undefined) return undefined;
+  if (!isDict(raw)) {
+    issues.push(`${path} must be an object of header names and values`);
+    return undefined;
+  }
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!isValidHeaderName(name)) issues.push(`${path}: "${name}" is not a valid header name`);
+    else if (typeof value !== 'string') issues.push(`${path}.${name} must be a string`);
+    else if (!isValidHeaderValue(value)) issues.push(`${path}.${name} must not contain line breaks`);
+    else headers[name] = value;
+  }
+  return Object.keys(headers).length ? headers : undefined;
+}
+
+/**
+ * Expands `${env:NAME}` references in header values. Unset variables become
+ * empty strings, so a missing secret fails visibly at the endpoint.
+ */
+export function resolveHeaderValue(value: string, env: Record<string, string | undefined>): string {
+  return value.replace(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name: string) => env[name] ?? '');
+}
 
 /**
  * Validates an untrusted config object and fills in defaults. Never throws:
@@ -237,9 +277,7 @@ export function normalizeConfig(raw: unknown): NormalizedConfig {
           baseUrl: str(p['baseUrl'], `ai.providers.${id}.baseUrl`),
           apiKey: str(p['apiKey'], `ai.providers.${id}.apiKey`),
           apiKeyEnv: str(p['apiKeyEnv'], `ai.providers.${id}.apiKeyEnv`),
-          headers: isDict(p['headers'])
-            ? Object.fromEntries(Object.entries(p['headers']).filter(([, v]) => typeof v === 'string') as [string, string][])
-            : undefined,
+          headers: normalizeHeaders(p['headers'], `ai.providers.${id}.headers`, issues),
           options: isDict(p['options']) ? p['options'] : undefined,
         };
       }
@@ -306,7 +344,8 @@ export function redactConfig(config: SapiaConfig): SapiaConfig {
   const copy = structuredClone(config);
   for (const provider of Object.values(copy.ai.providers)) {
     if (provider.apiKey) provider.apiKey = '••••••••';
-    delete provider.headers;
+    // Header names are harmless and tell the UI what is configured; values may be secrets.
+    if (provider.headers) provider.headers = Object.fromEntries(Object.keys(provider.headers).map((name) => [name, '••••••••']));
   }
   return copy;
 }
