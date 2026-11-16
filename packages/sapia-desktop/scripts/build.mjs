@@ -35,4 +35,5 @@ await build({ ...common, entryPoints: [join(root, 'src', 'main', 'main.ts')], ou
 await build({ ...common, entryPoints: [join(root, 'src', 'preload', 'preload.ts')], outfile: join(dist, 'preload.cjs'), minifySyntax: true });
 
 cpSync(webDist, join(dist, 'web'), { recursive: true });
+cpSync(join(root, 'assets', 'icon.png'), join(dist, 'icon.png'));
 console.log(`Sapia Desktop ${version} built to ${dist}`);

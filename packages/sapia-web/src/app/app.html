@@ -2,17 +2,7 @@
   <!-- Rail ------------------------------------------------------------------>
   <nav class="rail" [attr.aria-label]="'Sapia'">
     <div class="logo" [matTooltip]="t('app.tagline')" matTooltipPosition="right">
-      <svg viewBox="0 0 48 48" width="30" height="30" aria-hidden="true">
-        <defs>
-          <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#8b7cf6" />
-            <stop offset=".5" stop-color="#6d8dfa" />
-            <stop offset="1" stop-color="#4fd1c5" />
-          </linearGradient>
-        </defs>
-        <rect width="48" height="48" rx="13" fill="url(#logo-g)" />
-        <path d="M31 17.5c-1.600-2-4-3-6.800-3-4 0-6.700 2.100-6.700 5.200 0 6.800 14 3.300 14 10.100 0 3.200-2.900 5.200-7 5.200-3.100 0-5.800-1.200-7.500-3.400" fill="none" stroke="#fff" stroke-width="3.400" stroke-linecap="round" />
-      </svg>
+      <sapia-logo [size]="30" />
     </div>
 
     <button class="icon-button rail-button" (click)="newDiagram()" [matTooltip]="t('action.new') + '  ' + keys().new" matTooltipPosition="right" [attr.aria-label]="t('action.new')">

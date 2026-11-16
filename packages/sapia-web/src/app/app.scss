@@ -27,13 +27,13 @@
 .logo {
   margin-bottom: 14px;
 
-  svg {
+  sapia-logo {
     display: block;
     border-radius: 9px;
     box-shadow: 0 6px 16px -6px rgba(109, 141, 250, 0.75);
     transition: transform 0.4s var(--ease);
   }
-  &:hover svg {
+  &:hover sapia-logo {
     transform: rotate(-8deg) scale(1.06);
   }
 }

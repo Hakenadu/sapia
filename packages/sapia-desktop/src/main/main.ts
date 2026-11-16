@@ -164,6 +164,7 @@ async function createWindow(): Promise<void> {
     minHeight: 560,
     show: false,
     title: 'Sapia',
+    icon: join(__dirname, 'icon.png'),
     backgroundColor: dark ? '#090b10' : '#f3f4f8',
     autoHideMenuBar: true,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',

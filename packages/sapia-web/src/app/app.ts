@@ -24,6 +24,7 @@ import { Preview } from './preview/preview';
 import { Icon } from './ui/icon';
 import type { IconName } from './ui/icon';
 import { LanguageBadge } from './ui/language-badge';
+import { Logo } from './ui/logo';
 
 const SPLIT_KEY = 'sapia.split';
 
@@ -36,7 +37,7 @@ interface Problem {
 /** The application shell: toolbar, editor / preview split, library, status bar. */
 @Component({
   selector: 'sapia-root',
-  imports: [AiWidget, CodeEditor, Icon, LanguageBadge, LibraryPanel, MatMenuModule, MatTooltipModule, Onboarding, Preview],
+  imports: [AiWidget, CodeEditor, Icon, LanguageBadge, LibraryPanel, Logo, MatMenuModule, MatTooltipModule, Onboarding, Preview],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

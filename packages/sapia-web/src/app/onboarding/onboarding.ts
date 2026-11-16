@@ -6,6 +6,7 @@ import { SapiaService } from '../core/sapia.service';
 import { ThemeService } from '../core/theme.service';
 import { Icon } from '../ui/icon';
 import type { IconName } from '../ui/icon';
+import { Logo } from '../ui/logo';
 
 type TestState = { status: 'idle' } | { status: 'testing' } | { status: 'ok'; message: string } | { status: 'failed'; message: string };
 
@@ -15,7 +16,7 @@ type TestState = { status: 'idle' } | { status: 'testing' } | { status: 'ok'; me
  */
 @Component({
   selector: 'sapia-onboarding',
-  imports: [Icon],
+  imports: [Icon, Logo],
   templateUrl: './onboarding.html',
   styleUrl: './onboarding.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
