@@ -1,0 +1,101 @@
+<div
+  #viewport
+  class="viewport"
+  [class.panning]="panning()"
+  [class.has-diagram]="hasDiagram()"
+  [style.background-position]="gridPosition()"
+  [style.background-size]="gridSize()"
+  (wheel)="onWheel($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+  (pointerleave)="onPointerLeave()"
+  (dblclick)="onDoubleClick($event)"
+>
+  <div #stage class="stage" [class.stale]="stale()" [style.transform]="transform()"></div>
+</div>
+
+@if (state() === 'rendering') {
+  <div class="progress" role="progressbar" [attr.aria-label]="t('preview.rendering')"></div>
+}
+
+@switch (state()) {
+  @case ('empty') {
+    <div class="placeholder">
+      <div class="glyph"><sapia-icon name="sparkles" [size]="26" [stroke]="1.5" /></div>
+      <h3>{{ t('preview.empty.title') }}</h3>
+      <p>{{ t('preview.empty.text') }}</p>
+    </div>
+  }
+  @case ('unknown') {
+    <div class="placeholder">
+      <div class="glyph muted"><sapia-icon name="search" [size]="26" [stroke]="1.5" /></div>
+      <h3>{{ t('preview.unknown.title') }}</h3>
+      <p>{{ t('preview.unknown.text') }}</p>
+    </div>
+  }
+  @case ('unsupported') {
+    <div class="placeholder">
+      <div class="glyph muted"><sapia-icon name="image" [size]="26" [stroke]="1.5" /></div>
+      <h3>{{ t('preview.unsupported.title') }}</h3>
+      <p>{{ t('preview.unsupported.text') }}</p>
+    </div>
+  }
+  @case ('rendering') {
+    @if (!hasDiagram()) {
+      <div class="placeholder">
+        <sapia-icon class="spin" name="loader" [size]="26" [stroke]="1.5" />
+        <p>{{ t('preview.rendering') }}</p>
+      </div>
+    }
+  }
+  @case ('error') {
+    @if (hasDiagram()) {
+      <div class="stale-badge">
+        <sapia-icon name="alert" [size]="14" />
+        <span>{{ t('preview.stale') }}</span>
+      </div>
+    } @else {
+      <div class="placeholder">
+        <div class="glyph danger"><sapia-icon name="error" [size]="26" [stroke]="1.5" /></div>
+        <h3>{{ t('preview.error.title') }}</h3>
+        <p>{{ failure() ?? errorMessage() ?? t('preview.error.text') }}</p>
+      </div>
+    }
+  }
+}
+
+@if (hasDiagram()) {
+  <div class="hint">
+    <sapia-icon name="click" [size]="13" />
+    <span>{{ t('preview.hint') }}</span>
+  </div>
+
+  <div class="toolbar top">
+    <button class="icon-button" [matMenuTriggerFor]="exportMenu" [matTooltip]="t('preview.export')" [attr.aria-label]="t('preview.export')">
+      <sapia-icon name="download" />
+    </button>
+  </div>
+
+  <div class="toolbar bottom">
+    <button class="icon-button" (click)="zoomBy(1 / 1.25)" [matTooltip]="t('preview.zoomOut')" [attr.aria-label]="t('preview.zoomOut')">
+      <sapia-icon name="zoom-out" />
+    </button>
+    <button class="percent" (click)="resetZoom()" [matTooltip]="t('preview.zoomReset')">{{ percent() }}</button>
+    <button class="icon-button" (click)="zoomBy(1.25)" [matTooltip]="t('preview.zoomIn')" [attr.aria-label]="t('preview.zoomIn')">
+      <sapia-icon name="zoom-in" />
+    </button>
+    <span class="divider"></span>
+    <button class="icon-button" (click)="fit()" [matTooltip]="t('preview.fit')" [attr.aria-label]="t('preview.fit')">
+      <sapia-icon name="fit" />
+    </button>
+  </div>
+}
+
+<mat-menu #exportMenu="matMenu" xPosition="before">
+  <div class="menu-caption">{{ t('preview.export') }}</div>
+  <button mat-menu-item (click)="exportSvg()"><sapia-icon name="download" /> {{ t('preview.export.svg') }}</button>
+  <button mat-menu-item (click)="exportPng()"><sapia-icon name="image" /> {{ t('preview.export.png') }}</button>
+  <button mat-menu-item (click)="copySvg()"><sapia-icon name="copy" /> {{ t('preview.export.copy') }}</button>
+</mat-menu>

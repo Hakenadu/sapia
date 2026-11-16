@@ -1,0 +1,250 @@
+<div class="shell" [class.with-library]="libraryOpen()">
+  <!-- Rail ------------------------------------------------------------------>
+  <nav class="rail" [attr.aria-label]="'Sapia'">
+    <div class="logo" [matTooltip]="t('app.tagline')" matTooltipPosition="right">
+      <sapia-logo [size]="30" />
+    </div>
+
+    <button class="icon-button rail-button" (click)="newDiagram()" [matTooltip]="t('action.new') + '  ' + keys().new" matTooltipPosition="right" [attr.aria-label]="t('action.new')">
+      <sapia-icon name="new" [size]="18" />
+    </button>
+    <button class="icon-button rail-button" [class.active]="libraryOpen()" (click)="libraryOpen.set(!libraryOpen())" [matTooltip]="t('action.library') + '  ' + keys().library" matTooltipPosition="right" [attr.aria-label]="t('action.library')" [attr.aria-pressed]="libraryOpen()">
+      <sapia-icon name="library" [size]="18" />
+      @if (ws.library().length; as count) {
+        <span class="count">{{ count > 99 ? '99+' : count }}</span>
+      }
+    </button>
+
+    <span class="grow"></span>
+
+    <button class="icon-button rail-button" [matMenuTriggerFor]="languageMenu" [matTooltip]="t('action.language')" matTooltipPosition="right" [attr.aria-label]="t('action.language')">
+      <sapia-icon name="languages" [size]="18" />
+    </button>
+    <button class="icon-button rail-button" [matMenuTriggerFor]="themeMenu" [matTooltip]="t('action.theme')" matTooltipPosition="right" [attr.aria-label]="t('action.theme')">
+      <sapia-icon [name]="themeIcon()" [size]="18" />
+    </button>
+    <button class="icon-button rail-button" (click)="openSettings()" [matTooltip]="t('action.settings')" matTooltipPosition="right" [attr.aria-label]="t('action.settings')">
+      <sapia-icon name="settings" [size]="18" />
+    </button>
+  </nav>
+
+  <!-- Library --------------------------------------------------------------->
+  @if (libraryOpen()) {
+    <sapia-library-panel class="library" (opened)="open($event)" (deleted)="remove($event)" (created)="newDiagram()" (closed)="libraryOpen.set(false)" />
+  }
+
+  <div class="main">
+    <!-- Top bar ------------------------------------------------------------->
+    <header class="topbar">
+      <div class="doc">
+        <input
+          #title
+          class="title"
+          type="text"
+          spellcheck="false"
+          [value]="ws.name()"
+          [attr.aria-label]="t('doc.rename')"
+          [matTooltip]="t('doc.rename')"
+          (change)="commitName(title)"
+          (keydown.enter)="title.blur()"
+          (keydown.escape)="title.value = ws.name(); title.blur()"
+        />
+        <span class="save-state" [attr.data-state]="saveState()">
+          <i></i>
+          {{ t(saveState() === 'saved' ? 'doc.saved' : saveState() === 'unsaved' ? 'doc.unsaved' : 'doc.notSaved') }}
+        </span>
+      </div>
+
+      <div class="detected" [matTooltip]="t('detect.tooltip')">
+        @if (ws.language(); as language) {
+          <sapia-language-badge [languageId]="language.id" [name]="language.name" [size]="20" />
+          <span class="lang">{{ language.name }}</span>
+          <span class="sep"></span>
+          <span class="type">{{ ws.diagramType() === 'unknown' ? t('detect.unknownType') : i18n.diagramType(ws.diagramType()) }}</span>
+        } @else {
+          <sapia-icon name="search" [size]="13" />
+          <span class="type">{{ t('detect.none') }}</span>
+        }
+      </div>
+
+      <span class="grow"></span>
+
+      <button class="text-button ghost" #convertTrigger="matMenuTrigger" [matMenuTriggerFor]="convertMenu" [matTooltip]="t('convert.title') + '  ' + keys().convert">
+        <sapia-icon name="convert" [size]="15" />
+        <span class="wide-only">{{ t('action.convert') }}</span>
+        <sapia-icon name="chevron-down" [size]="13" />
+      </button>
+
+      <button class="ai-button" [class.active]="aiOpen()" (click)="toggleAi()" [attr.aria-pressed]="aiOpen()">
+        <sapia-icon name="sparkles" [size]="15" />
+        <span>{{ t('action.ai') }}</span>
+        <span class="kbds">
+          @for (k of keys().ai; track $index) {
+            <kbd>{{ k }}</kbd>
+          }
+        </span>
+      </button>
+
+      <button class="text-button primary" (click)="save()" [disabled]="ws.isSaved()" [matTooltip]="t('action.save') + '  ' + keys().save">
+        <sapia-icon name="save" [size]="15" />
+        <span class="wide-only">{{ t('action.save') }}</span>
+      </button>
+
+      <button class="icon-button" [matMenuTriggerFor]="moreMenu" [matTooltip]="t('action.more')" [attr.aria-label]="t('action.more')">
+        <sapia-icon name="more" [size]="17" />
+      </button>
+    </header>
+
+    <!-- Workspace ----------------------------------------------------------->
+    <main class="workspace" #workspace [style.--split.%]="split()">
+      <section class="pane editor-pane" [attr.aria-label]="t('editor.title')">
+        <sapia-code-editor
+          class="editor"
+          [value]="ws.source()"
+          [language]="ws.language()"
+          [diagramType]="ws.diagramType()"
+          [diagnostics]="ws.diagnostics()"
+          [config]="sapia.config().editor"
+          [placeholder]="t('editor.placeholder')"
+          [reveal]="ws.reveal()"
+          (valueChange)="ws.setSource($event)"
+          (cursorChange)="ws.cursor.set($event)"
+        />
+
+        @if (problemsOpen() && problems().length) {
+          <div class="problems">
+            <header>
+              <span>{{ t('status.problems') }}</span>
+              <span class="badge">{{ problems().length }}</span>
+              <span class="grow"></span>
+              <button class="icon-button small" (click)="problemsOpen.set(false)" [attr.aria-label]="t('action.close')"><sapia-icon name="panel-close" [size]="14" /></button>
+            </header>
+            <ul>
+              @for (problem of problems(); track $index) {
+                <li>
+                  <button (click)="goTo(problem)" [attr.data-severity]="problem.diagnostic.severity">
+                    <sapia-icon [name]="problem.diagnostic.severity === 'error' ? 'error' : problem.diagnostic.severity === 'warning' ? 'alert' : 'info'" [size]="14" />
+                    <span class="message">{{ problem.diagnostic.message }}</span>
+                    <span class="where">{{ t('status.line', { line: problem.line }) }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+
+      <div
+        class="divider"
+        role="separator"
+        tabindex="0"
+        aria-orientation="vertical"
+        [attr.aria-valuenow]="split()"
+        aria-valuemin="22"
+        aria-valuemax="78"
+        (pointerdown)="startResize($event, workspace)"
+        (dblclick)="resetSplit()"
+        (keydown.arrowLeft)="nudgeSplit(-2)"
+        (keydown.arrowRight)="nudgeSplit(2)"
+      >
+        <i></i>
+      </div>
+
+      <section class="pane preview-pane" [attr.aria-label]="t('preview.title')">
+        <sapia-preview
+          [svg]="ws.svg()"
+          [state]="ws.previewState()"
+          [stale]="ws.previewStale()"
+          [failure]="ws.renderFailure()"
+          [errorMessage]="firstError()"
+          [fileName]="ws.name()"
+          [resolve]="resolve"
+          (locate)="onLocate($event)"
+          (exported)="onExported($event)"
+        />
+      </section>
+    </main>
+
+    <!-- Status bar ---------------------------------------------------------->
+    <footer class="status">
+      <button class="status-item problems-toggle" [class.active]="problemsOpen()" [disabled]="!problems().length" (click)="problemsOpen.set(!problemsOpen())">
+        @if (ws.errorCount(); as errors) {
+          <span class="err"><sapia-icon name="error" [size]="13" /> {{ t('status.errors', { count: errors }) }}</span>
+        }
+        @if (ws.warningCount(); as warnings) {
+          <span class="warn"><sapia-icon name="alert" [size]="13" /> {{ t('status.warnings', { count: warnings }) }}</span>
+        }
+        @if (!ws.errorCount() && !ws.warningCount()) {
+          <span class="ok"><sapia-icon name="check-circle" [size]="13" /> {{ t('status.ok') }}</span>
+        }
+      </button>
+
+      <span class="grow"></span>
+
+      @if (ws.previewState() === 'ok' && ws.renderMs() !== null) {
+        <span class="status-item dim">{{ t('status.rendered', { ms: ws.renderMs()! }) }}</span>
+      }
+      <span class="status-item mono">{{ t('status.position', { line: ws.cursor().line + 1, column: ws.cursor().column + 1 }) }}</span>
+      @if (ws.language(); as language) {
+        <span class="status-item">{{ language.name }}</span>
+      }
+      <span class="status-item dim">{{ sapia.platform === 'desktop' ? 'Sapia Desktop' : 'Sapia Web' }}</span>
+    </footer>
+  </div>
+</div>
+
+<!-- Menus ------------------------------------------------------------------->
+<mat-menu #convertMenu="matMenu" xPosition="before">
+  <div class="menu-caption">{{ t('convert.title') }}</div>
+  @for (target of ws.conversionTargets(); track target.id) {
+    <button mat-menu-item (click)="convert(target.id, target.name)">
+      <sapia-language-badge [languageId]="target.id" [name]="target.name" [size]="22" />
+      <span class="menu-label">{{ t('action.convertTo', { language: target.name }) }}</span>
+    </button>
+  } @empty {
+    <div class="menu-empty">
+      <strong>{{ t('convert.none') }}</strong>
+      <span>{{ t('convert.noneHint') }}</span>
+    </div>
+  }
+</mat-menu>
+
+<mat-menu #moreMenu="matMenu" xPosition="before">
+  <button mat-menu-item (click)="duplicate()"><sapia-icon name="copy" /> <span class="menu-label">{{ t('action.duplicate') }}</span></button>
+  <button mat-menu-item (click)="copySource()"><sapia-icon name="copy" /> <span class="menu-label">{{ t('action.copySource') }}</span></button>
+  <button mat-menu-item class="danger" [disabled]="!canDelete()" (click)="remove()"><sapia-icon name="trash" /> <span class="menu-label">{{ t('action.delete') }}</span></button>
+</mat-menu>
+
+<mat-menu #themeMenu="matMenu">
+  <div class="menu-caption">{{ t('action.theme') }}</div>
+  @for (option of themes; track option.id) {
+    <button mat-menu-item (click)="theme.set(option.id)">
+      <sapia-icon [name]="option.icon" />
+      <span class="menu-label">{{ t('theme.' + option.id) }}</span>
+      @if (theme.preference() === option.id) {
+        <sapia-icon class="menu-trailing" name="check" [size]="14" />
+      }
+    </button>
+  }
+</mat-menu>
+
+<mat-menu #languageMenu="matMenu">
+  <div class="menu-caption">{{ t('action.language') }}</div>
+  @for (locale of i18n.locales; track locale) {
+    <button mat-menu-item (click)="sapia.setLocale(locale)">
+      <span class="locale-code">{{ locale.toUpperCase() }}</span>
+      <span class="menu-label">{{ t('locale.' + locale) }}</span>
+      @if (i18n.locale() === locale) {
+        <sapia-icon class="menu-trailing" name="check" [size]="14" />
+      }
+    </button>
+  }
+</mat-menu>
+
+@if (aiOpen()) {
+  <sapia-ai-widget (closed)="closeAi()" />
+}
+
+@if (sapia.needsOnboarding()) {
+  <sapia-onboarding (finished)="editor()?.focus()" />
+}

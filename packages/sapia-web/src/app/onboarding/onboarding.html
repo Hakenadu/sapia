@@ -1,0 +1,145 @@
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<section class="card" role="dialog" aria-modal="true" [attr.aria-label]="t('onboarding.welcome.title')">
+  <ol class="steps">
+    @for (name of steps; track name; let i = $index) {
+      <li [class.active]="i === step()" [class.done]="i < step()">
+        <span class="dot">
+          @if (i < step()) {
+            <sapia-icon name="check" [size]="12" [stroke]="2.6" />
+          } @else {
+            {{ i + 1 }}
+          }
+        </span>
+        {{ t('onboarding.step.' + name) }}
+      </li>
+    }
+  </ol>
+
+  @switch (step()) {
+    @case (0) {
+      <div class="pane">
+        <div class="mark"><sapia-logo [size]="60" /></div>
+        <h1>{{ t('onboarding.welcome.title') }}</h1>
+        <p class="lead">{{ t('onboarding.welcome.text') }}</p>
+
+        <div class="field">
+          <span class="label"><sapia-icon name="languages" [size]="14" /> {{ t('onboarding.language') }}</span>
+          <div class="segmented">
+            @for (locale of i18n.locales; track locale) {
+              <button [class.active]="locale === i18n.locale()" (click)="i18n.setLocale(locale)">{{ t('locale.' + locale) }}</button>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label"><sapia-icon name="sun" [size]="14" /> {{ t('onboarding.theme') }}</span>
+          <div class="themes">
+            @for (option of themes; track option.id) {
+              <button class="theme" [class.active]="theme.preference() === option.id" (click)="theme.set(option.id)">
+                <span class="swatch" [attr.data-kind]="option.id"><i></i><i></i><i></i></span>
+                <span class="name"><sapia-icon [name]="option.icon" [size]="14" /> {{ t('theme.' + option.id) }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+      <footer>
+        <span></span>
+        <button class="text-button primary big" (click)="step.set(1)">{{ t('action.next') }} <sapia-icon name="chevron-right" [size]="15" /></button>
+      </footer>
+    }
+
+    @case (1) {
+      <div class="pane">
+        <h1><sapia-icon name="sparkles" [size]="22" /> {{ t('onboarding.ai.title') }}</h1>
+        <p class="lead">{{ t('onboarding.ai.text') }}</p>
+
+        <div class="field">
+          <span class="label">{{ t('onboarding.ai.api') }}</span>
+          <div class="types">
+            @for (type of providerTypes(); track type.id) {
+              <button class="type" [class.active]="type.id === this.type()" (click)="selectType(type)">
+                <strong>{{ type.name }}</strong>
+                <small>{{ hint(type) }}</small>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="grid">
+          <label class="field wide">
+            <span class="label"><sapia-icon name="globe" [size]="14" /> {{ t('onboarding.ai.baseUrl') }}</span>
+            <input #url type="url" spellcheck="false" [value]="baseUrl()" (input)="baseUrl.set(url.value); edited()" [placeholder]="selectedType()?.defaultBaseUrl ?? 'https://'" />
+          </label>
+          <label class="field wide">
+            <span class="label"><sapia-icon name="key" [size]="14" /> {{ t('onboarding.ai.apiKey') }}</span>
+            <input #key type="password" autocomplete="off" spellcheck="false" [value]="apiKey()" (input)="apiKey.set(key.value); edited()" placeholder="sk-…" />
+            <small class="hint">{{ t('onboarding.ai.apiKeyHint') }}@if (selectedType()?.apiKeyEnv; as env) { {{ t('onboarding.ai.apiKeyEnv', { name: env }) }} }</small>
+          </label>
+          <label class="field wide">
+            <span class="label"><sapia-icon name="bot" [size]="14" /> {{ t('onboarding.ai.model') }}</span>
+            <input #m type="text" spellcheck="false" list="ob-models" [value]="model()" (input)="model.set(m.value); edited()" />
+            <datalist id="ob-models">
+              @for (id of models(); track id) {
+                <option [value]="id"></option>
+              }
+            </datalist>
+          </label>
+        </div>
+
+        <div class="test" [attr.data-status]="test().status">
+          <button class="text-button" [disabled]="!canConnect()" (click)="runTest()">
+            @if (test().status === 'testing') {
+              <sapia-icon name="loader" class="spin" [size]="14" /> {{ t('onboarding.ai.testing') }}
+            } @else {
+              <sapia-icon name="plug" [size]="14" /> {{ t('onboarding.ai.test') }}
+            }
+          </button>
+          @if (test(); as state) {
+            @if (state.status === 'ok') {
+              <span class="result ok"><sapia-icon name="check-circle" [size]="15" /> {{ state.message }}</span>
+            } @else if (state.status === 'failed') {
+              <span class="result failed"><sapia-icon name="x-circle" [size]="15" /> {{ state.message }}</span>
+            }
+          }
+        </div>
+        @if (saveError(); as error) {
+          <p class="result failed block"><sapia-icon name="alert" [size]="15" /> {{ error }}</p>
+        }
+      </div>
+      <footer>
+        <button class="text-button ghost" (click)="step.set(0)">{{ t('action.back') }}</button>
+        <span class="grow"></span>
+        <button class="text-button ghost" [disabled]="saving()" (click)="complete(null)">{{ t('onboarding.ai.skip') }}</button>
+        <button class="text-button primary big" [disabled]="!canConnect()" (click)="connect()">
+          @if (saving()) {
+            <sapia-icon name="loader" class="spin" [size]="14" />
+          }
+          {{ t('onboarding.ai.connect') }}
+        </button>
+      </footer>
+    }
+
+    @case (2) {
+      <div class="pane center">
+        <div class="success"><sapia-icon name="check" [size]="30" [stroke]="2.4" /></div>
+        <h1>{{ t('onboarding.done.title') }}</h1>
+        <p class="lead">{{ t('onboarding.done.text') }} <code>{{ configPath() }}</code></p>
+        <ul class="summary">
+          <li [class.muted]="!connected()"><sapia-icon [name]="connected() ? 'sparkles' : 'info'" [size]="15" /> {{ connectedSummary() }}</li>
+          @if (connected()) {
+            <li>
+              <sapia-icon name="enter" [size]="15" />
+              <span>{{ t('onboarding.done.tipBefore') }} @for (k of shortcut(); track $index) {<kbd>{{ k }}</kbd>} {{ t('onboarding.done.tipAfter') }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+      <footer>
+        <span class="grow"></span>
+        <button class="text-button primary big" (click)="start()">{{ t('onboarding.done.start') }} <sapia-icon name="chevron-right" [size]="15" /></button>
+      </footer>
+    }
+  }
+</section>

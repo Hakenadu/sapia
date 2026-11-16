@@ -1,0 +1,22 @@
+{
+  "name": "@sapia/plugin-mermaid",
+  "version": "0.1.0",
+  "description": "Mermaid language support for Sapia: detection, highlighting, completion, validation, rendering and metamodel converters.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist"],
+  "sapia": { "plugin": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "mermaid": "^12.3.0"
+  },
+  "peerDependencies": {
+    "@sapia/core": "^0.1.0"
+  }
+}

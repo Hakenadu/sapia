@@ -1,0 +1,99 @@
+<header>
+  <h2>{{ t('settings.title') }}</h2>
+  <button class="icon-button" (click)="ref.close()" [attr.aria-label]="t('action.close')"><sapia-icon name="close" /></button>
+</header>
+
+<div class="layout">
+  <nav role="tablist">
+    @for (item of tabs; track item) {
+      <button role="tab" [class.active]="tab() === item" [attr.aria-selected]="tab() === item" (click)="tab.set(item)">
+        <sapia-icon [name]="item === 'plugins' ? 'plugins' : item === 'languages' ? 'languages' : item === 'shortcuts' ? 'key' : 'settings'" [size]="15" />
+        {{ t('settings.' + item) }}
+      </button>
+    }
+  </nav>
+
+  <section>
+    @switch (tab()) {
+      @case ('plugins') {
+        @for (plugin of sapia.plugins(); track plugin.id) {
+          <article class="row" [class.failed]="plugin.status === 'failed'">
+            <div class="plug"><sapia-icon name="plug" [size]="16" /></div>
+            <div class="body">
+              <div class="title">
+                {{ plugin.name }}
+                @if (plugin.version) {
+                  <span class="version">v{{ plugin.version }}</span>
+                }
+              </div>
+              <div class="desc">{{ plugin.error ?? plugin.description ?? plugin.id }}</div>
+              <div class="origin">{{ plugin.origin === 'builtin' ? t('settings.plugin.builtin') : plugin.origin }}</div>
+            </div>
+            <span class="status" [class]="plugin.status">{{ t('settings.plugin.' + plugin.status) }}</span>
+          </article>
+        }
+      }
+      @case ('languages') {
+        @for (language of languages(); track language.id) {
+          <article class="language">
+            <div class="language-head">
+              <sapia-language-badge [languageId]="language.id" [name]="language.name" [size]="30" />
+              <div>
+                <div class="title">{{ language.name }}</div>
+                <div class="desc">{{ t('settings.languages.types') }}: {{ language.types.length }}</div>
+              </div>
+            </div>
+            <div class="types">
+              @for (type of language.types; track type.id) {
+                <span class="type" [class.convertible]="type.convertible">
+                  @if (type.convertible) {
+                    <sapia-icon name="convert" [size]="11" />
+                  }
+                  {{ i18n.diagramType(type.id) }}
+                </span>
+              }
+            </div>
+          </article>
+        }
+        <p class="legend"><sapia-icon name="convert" [size]="12" /> {{ t('settings.languages.convertible') }}</p>
+      }
+      @case ('shortcuts') {
+        @for (shortcut of shortcuts(); track shortcut.label) {
+          <div class="shortcut">
+            <span>{{ t(shortcut.label) }}</span>
+            <span class="keys">
+              @for (key of shortcut.keys; track $index) {
+                <kbd>{{ key }}</kbd>
+              }
+            </span>
+          </div>
+        }
+      }
+      @case ('config') {
+        @if (sapia.bootstrap(); as bootstrap) {
+          <p class="text">{{ t('settings.config.desktop') }}</p>
+          <code class="path">{{ bootstrap.configPath }}</code>
+          <button class="text-button" (click)="showConfig()"><sapia-icon name="open" [size]="15" /> {{ t('settings.config.show') }}</button>
+          <div class="kv">
+            <span>{{ t('settings.config.ai') }}</span>
+            <strong>{{ aiProvider() ?? t('settings.config.aiNone') }}</strong>
+          </div>
+          <p class="version-line">{{ t('settings.config.version', { version: bootstrap.appVersion }) }}</p>
+        } @else {
+          <p class="text">{{ t('settings.config.web') }}</p>
+          <code class="path">config.json</code>
+        }
+        @if (sapia.configIssues().length) {
+          <div class="issues">
+            <div class="issues-title"><sapia-icon name="alert" [size]="14" /> {{ t('settings.config.issues') }}</div>
+            <ul>
+              @for (issue of sapia.configIssues(); track issue) {
+                <li>{{ issue }}</li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    }
+  </section>
+</div>

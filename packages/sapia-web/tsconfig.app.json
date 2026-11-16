@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": [] },
+  "include": ["src/**/*.ts", "../sapia-core/src/**/*.ts", "../sapia-plugin-plantuml/src/**/*.ts", "../sapia-plugin-mermaid/src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "../**/*.spec.ts"]
+}

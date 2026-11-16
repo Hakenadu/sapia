@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+release/
+.angular/
+*.tsbuildinfo
+.DS_Store
+coverage/
+*.log
+packages/sapia-web/vendor/

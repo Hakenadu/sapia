@@ -1,0 +1,484 @@
+:host {
+  display: block;
+  height: 100dvh;
+}
+
+.shell {
+  display: flex;
+  height: 100%;
+  background: var(--bg);
+}
+
+.grow {
+  flex: 1;
+}
+
+// -- rail ----------------------------------------------------------------------
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  width: 56px;
+  padding: 12px 0 10px;
+}
+
+.logo {
+  margin-bottom: 14px;
+
+  sapia-logo {
+    display: block;
+    border-radius: 9px;
+    box-shadow: 0 6px 16px -6px rgba(109, 141, 250, 0.75);
+    transition: transform 0.4s var(--ease);
+  }
+  &:hover sapia-logo {
+    transform: rotate(-8deg) scale(1.06);
+  }
+}
+
+.rail-button {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+
+  .count {
+    position: absolute;
+    top: 2px;
+    right: 1px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+    box-shadow: 0 0 0 2px var(--bg);
+  }
+}
+
+// -- library -------------------------------------------------------------------
+.library {
+  flex: none;
+  width: 312px;
+  margin: 8px 0 8px 0;
+  border-radius: var(--radius-l);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  animation: library-in 0.26s var(--ease);
+}
+@keyframes library-in {
+  from {
+    opacity: 0;
+    width: 0;
+    transform: translateX(-12px);
+  }
+}
+
+// -- main ----------------------------------------------------------------------
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: 52px;
+  padding: 0 12px 0 8px;
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  field-sizing: content;
+  min-width: 60px;
+  max-width: 34vw;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  text-overflow: ellipsis;
+  outline: none;
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+
+  &:hover {
+    background: var(--surface-3);
+  }
+  &:focus {
+    background: var(--surface-1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+}
+
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11.5px;
+  font-weight: 550;
+  white-space: nowrap;
+
+  i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-3);
+    transition: background 0.2s var(--ease);
+  }
+  &[data-state='saved'] i {
+    background: var(--success);
+  }
+  &[data-state='unsaved'] i {
+    background: var(--warning);
+    box-shadow: 0 0 0 3px var(--warning-soft);
+  }
+}
+
+.detected {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  margin-left: 10px;
+  padding: 0 11px 0 5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: default;
+
+  > sapia-icon {
+    margin-left: 6px;
+  }
+  .lang {
+    color: var(--text);
+    font-weight: 640;
+  }
+  .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-3);
+  }
+}
+
+.ai-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+    var(--gradient-brand) border-box;
+  border: 1.5px solid transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 620;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.2s var(--ease);
+
+  sapia-icon {
+    color: var(--primary);
+  }
+  .kbds {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 3px;
+  }
+  kbd {
+    height: 18px;
+    min-width: 18px;
+    font-size: 10.5px;
+    border-bottom-width: 1px;
+  }
+  &:hover,
+  &.active {
+    box-shadow: 0 6px 22px -8px #6d8dfa;
+  }
+  &:active {
+    transform: scale(0.97);
+  }
+  &.active {
+    background:
+      linear-gradient(var(--primary-soft), var(--primary-soft)) padding-box,
+      linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+      var(--gradient-brand) border-box;
+  }
+}
+
+// -- workspace -----------------------------------------------------------------
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--split) - 5px)) 10px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  padding: 0 10px 0 0;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--radius-l);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.editor {
+  flex: 1;
+  min-height: 0;
+}
+
+sapia-preview {
+  flex: 1;
+  min-height: 0;
+}
+
+.divider {
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+
+  i {
+    width: 3px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    opacity: 0;
+    transition:
+      opacity 0.15s var(--ease),
+      height 0.2s var(--ease),
+      background 0.15s var(--ease);
+  }
+  &:hover i,
+  &:focus-visible i {
+    opacity: 1;
+  }
+}
+:host(.resizing) {
+  cursor: col-resize;
+  user-select: none;
+
+  .divider i {
+    opacity: 1;
+    height: 64px;
+    background: var(--primary);
+  }
+  sapia-preview,
+  .editor {
+    pointer-events: none;
+  }
+}
+
+// -- problems ------------------------------------------------------------------
+.problems {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  max-height: 34%;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  animation: sapia-rise 0.2s var(--ease);
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 4px 14px;
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 680;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--surface-4);
+    font-size: 10.5px;
+    letter-spacing: 0;
+  }
+  .small {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+  ul {
+    margin: 0;
+    padding: 0 6px 6px;
+    list-style: none;
+    overflow: auto;
+  }
+  li button {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface-3);
+    }
+    sapia-icon {
+      flex: none;
+      margin-top: 2px;
+      color: var(--text-3);
+    }
+    &[data-severity='error'] sapia-icon {
+      color: var(--danger);
+    }
+    &[data-severity='warning'] sapia-icon {
+      color: var(--warning);
+    }
+  }
+  .message {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .where {
+    flex: none;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+}
+
+// -- status bar ----------------------------------------------------------------
+.status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  height: 30px;
+  padding: 0 14px 0 4px;
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 520;
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  white-space: nowrap;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  &.dim {
+    color: var(--text-3);
+  }
+  &.mono {
+    font-variant-numeric: tabular-nums;
+  }
+  .err {
+    color: var(--danger);
+  }
+  .warn {
+    color: var(--warning);
+  }
+  .ok {
+    color: var(--text-3);
+  }
+}
+button.status-item {
+  cursor: pointer;
+  &:hover:not(:disabled),
+  &.active {
+    background: var(--surface-3);
+  }
+  &:disabled {
+    cursor: default;
+  }
+}
+
+// Native window chrome of the desktop shell on macOS: keep clear of the traffic lights.
+:host-context(html[data-shell='mac']) {
+  .rail {
+    padding-top: 40px;
+    -webkit-app-region: drag;
+    button,
+    .logo {
+      -webkit-app-region: no-drag;
+    }
+  }
+  .topbar {
+    -webkit-app-region: drag;
+    button,
+    input,
+    .detected {
+      -webkit-app-region: no-drag;
+    }
+  }
+}
+
+@media (max-width: 1080px) {
+  .wide-only,
+  .ai-button .kbds,
+  .save-state {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .detected .lang,
+  .detected .sep {
+    display: none;
+  }
+  .status-item.dim {
+    display: none;
+  }
+}
