@@ -1,16 +1,74 @@
-# Sapia
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/logo.png" width="72" alt="Sapia logo">
+</p>
 
-A modern editor for text-based diagrams. Write PlantUML or Mermaid on the left, see the diagram on the right, click any element to jump to its source.
+<h1 align="center">Sapia</h1>
 
-- **Automatic detection** of the language (PlantUML, Mermaid, …) and the diagram type (sequence, class, state, mind map, …).
-- **Context-aware completion**: keywords, snippets and the names already used in the diagram, offered only where the syntax allows them.
-- **Conversion between languages** through a metamodel per diagram type (sequence, class, state, mind map).
-- **Live preview** with pan and zoom, click-to-source, SVG and PNG export. PlantUML is rendered locally, without a server or Java.
-- **Highlighting and diagnostics** per language, with errors marked in the editor.
-- **Library** to save diagrams and open them again.
-- **Light and dark mode**, following the system by default. Diagrams follow the mode too: custom colours (named, hex, `rgb()`) are adapted for dark mode and text is kept at WCAG contrast against its actual background. Switch to the static diagram theme to always see the original light colours. **English and German** UI.
-- **Plugins** for languages, converters, completion, rendering and AI tools. PlantUML and Mermaid are plugins themselves.
-- **AI assistant** in the desktop app, one shortcut away (`Ctrl/Cmd+K`), with tools to create, edit, check and convert diagrams.
+<p align="center">
+  A modern editor for text-based diagrams.<br>
+  Write PlantUML or Mermaid on the left, watch the diagram appear on the right.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@sapia/desktop"><img src="https://img.shields.io/npm/v/@sapia/desktop?label=%40sapia%2Fdesktop" alt="npm @sapia/desktop"></a>
+  <a href="https://www.npmjs.com/package/@sapia/web"><img src="https://img.shields.io/npm/v/@sapia/web?label=%40sapia%2Fweb" alt="npm @sapia/web"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
+
+![Sapia with a PlantUML sequence diagram](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/hero-light.png)
+
+```bash
+npm install -g @sapia/desktop
+sapia
+```
+
+That is all it takes for the desktop app. Prefer the browser? [`@sapia/web`](packages/sapia-web) is the same editor as a static site.
+
+## What Sapia does
+
+### Live rendering
+
+The diagram is redrawn while you type, with pan, zoom, click-to-source and SVG/PNG export. PlantUML runs locally in the app, without a server or Java.
+
+![Typing a Mermaid diagram, the preview updates live](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/live-editing.gif)
+
+### Diagram detection and context-aware completion
+
+Sapia recognises the language and the diagram type on its own (PlantUML or Mermaid, sequence, class, state, mind map, …), so there is nothing to pick. Completion knows where you are: keywords at the start of a line, the participants you already declared after an arrow, snippets for blocks like `alt` or `loop`.
+
+![Completion offers the participants of the diagram](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/completion.gif)
+
+### Errors where they happen
+
+Syntax errors are underlined in the editor and listed under *Problems*. The preview keeps showing the last valid version, so the diagram doesn't vanish while you are in the middle of a line.
+
+![A syntax error marked in the editor and listed under Problems](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/errors.png)
+
+### PlantUML and Mermaid built in, with conversion
+
+Both languages ship with Sapia, as plugins. **Convert** turns a diagram into the other language: a sequence, class, state or mind map diagram is parsed into a language-neutral model of its type and written out again. One click, and undo if you change your mind.
+
+![Converting a PlantUML sequence diagram to Mermaid](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/convert.gif)
+
+### AI assistant (desktop)
+
+Press `Ctrl/Cmd+K` and describe what you want. The assistant creates, edits, checks and converts diagrams through the same tools you use, and you see every step. It works with OpenAI and any OpenAI-compatible server (Ollama, LM Studio, vLLM, …); the API key stays in the desktop app's main process.
+
+![The AI assistant creating a class diagram](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/ai-assistant.png)
+
+### Share as a link
+
+**Share** packs the whole diagram, compressed, into a link or a short code. Nothing is uploaded: whoever opens the link gets the diagram straight from the URL.
+
+![The share dialog with link and code](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/share.png)
+
+### Plugins for more languages
+
+Everything a language needs (detection, highlighting, completion, diagnostics, rendering, click-to-source, conversion) comes from plugins, and PlantUML and Mermaid are plugins too. A plugin is one ES module; [`examples/sapia-plugin-dot`](examples/sapia-plugin-dot) adds Graphviz DOT in a single dependency-free file. See [Writing a plugin](#writing-a-plugin).
+
+![The example plugin adds Graphviz DOT](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/plugin-dot.png)
+
+Also included: a library for your diagrams, light and dark mode (diagram colours adapt too, with readable contrast), and an English and German UI.
 
 ## Packages
 
@@ -23,7 +81,7 @@ A modern editor for text-based diagrams. Write PlantUML or Mermaid on the left, 
 | [`packages/sapia-desktop`](packages/sapia-desktop) (`@sapia/desktop`) | The desktop application: Electron shell around `sapia-web`, plus config file, npm/local plugins and the AI backend. |
 | [`examples/sapia-plugin-dot`](examples/sapia-plugin-dot) | A dependency-free example plugin (Graphviz DOT). |
 
-## Getting started
+## Building from source
 
 Requires Node.js 22 or newer.
 
@@ -126,26 +184,6 @@ Plugins can add provider types, see below.
 
 `npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`; the same build is published as [`@sapia/web`](https://www.npmjs.com/package/@sapia/web). It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
 
-## Releasing
-
-All packages (`@sapia/core`, `@sapia/plugin-plantuml`, `@sapia/plugin-mermaid`, `@sapia/web`, `@sapia/desktop`) share one version. `main` carries the next version as a snapshot (`X.Y.Z-snapshot.0`), which is never published.
-
-To release, push a tag on the commit you want to ship:
-
-```bash
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-The [release workflow](.github/workflows/release.yml) sets the version from the tag on all packages (only inside the run), builds, tests and publishes them to npm with provenance, then commits the next snapshot (`0.1.2-snapshot.0`) to `main`. Versions already on npm are skipped, so a failed run can be re-run. `node scripts/set-version.mjs <version>` does the same version change locally.
-
-npm authentication, one of:
-
-- **Trusted publishing (recommended, no secret):** on npmjs.com, open each of the five packages → *Settings* → *Trusted Publisher* → *GitHub Actions*, with organization/user `Hakenadu`, repository `sapia`, workflow filename `release.yml`, no environment. The package has to exist on npm once before this is possible.
-- **Token:** create a granular access token on npmjs.com with read and write access to the `@sapia` scope (and "bypass 2FA" if the account requires 2FA for writes), and store it as the repository secret `NPM_TOKEN`.
-
-If `main` is protected against direct pushes, allow GitHub Actions to push to it, or the snapshot step fails after a successful publish.
-
 ## Writing a plugin
 
 A plugin is an ES module whose default export has an `id` and an `activate(context)` function. Everything registered through the context is removed again when the plugin is deactivated.
@@ -208,3 +246,23 @@ sapia-desktop         Electron: serves sapia-web, ~/.sapia/config.json, plugin r
 ```
 
 The desktop app adds a small delta to the web app: the page runs sandboxed with context isolation and talks to the main process through one narrow bridge (`window.sapiaHost`, typed as `SapiaHost` in `@sapia/core`). Without that bridge, the same build behaves as the web app.
+
+## Releasing
+
+All packages (`@sapia/core`, `@sapia/plugin-plantuml`, `@sapia/plugin-mermaid`, `@sapia/web`, `@sapia/desktop`) share one version. `main` carries the next version as a snapshot (`X.Y.Z-snapshot.0`), which is never published.
+
+To release, push a tag on the commit you want to ship:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+The [release workflow](.github/workflows/release.yml) sets the version from the tag on all packages (only inside the run), builds, tests and publishes them to npm with provenance, then commits the next snapshot (`0.1.2-snapshot.0`) to `main`. Versions already on npm are skipped, so a failed run can be re-run. `node scripts/set-version.mjs <version>` does the same version change locally.
+
+npm authentication, one of:
+
+- **Trusted publishing (recommended, no secret):** on npmjs.com, open each of the five packages → *Settings* → *Trusted Publisher* → *GitHub Actions*, with organization/user `Hakenadu`, repository `sapia`, workflow filename `release.yml`, no environment. The package has to exist on npm once before this is possible.
+- **Token:** create a granular access token on npmjs.com with read and write access to the `@sapia` scope (and "bypass 2FA" if the account requires 2FA for writes), and store it as the repository secret `NPM_TOKEN`.
+
+If `main` is protected against direct pushes, allow GitHub Actions to push to it, or the snapshot step fails after a successful publish.
