@@ -39,6 +39,11 @@ export interface OnboardingResult {
 export interface ProviderTestResult {
   ok: boolean;
   message: string;
+  /**
+   * Machine readable cause of a failure. `model-not-listed`: the endpoint works
+   * but its model list does not contain the model; the user may add it anyway.
+   */
+  reason?: 'model-not-listed';
   /** Model ids offered by the endpoint, when it lists them. */
   models?: string[];
 }

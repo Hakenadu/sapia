@@ -201,6 +201,13 @@ export const uiMessagesEn: Messages = {
   'onboarding.ai.apiKeyEnv': 'Leave empty to use the {name} environment variable.',
   'onboarding.done.tipBefore': 'Press',
   'onboarding.done.tipAfter': 'anywhere to open the assistant.',
+  'onboarding.ai.unlisted.title': 'The endpoint does not list “{model}”',
+  'onboarding.ai.unlisted.text': 'Credentials and endpoint work, but the model is missing from the endpoint’s model list. Some servers and proxies do not list every model they serve. You can pick one of the offered models or add the provider anyway; it is then saved without further checks.',
+  'onboarding.ai.unlisted.offered': 'Offered models',
+  'onboarding.ai.unlisted.add': 'Add anyway',
+  'view.label': 'View',
+  'view.source': 'Source',
+  'view.preview': 'Preview',
 };
 
 export const uiMessagesDe: Messages = {
@@ -404,4 +411,11 @@ export const uiMessagesDe: Messages = {
   'onboarding.ai.apiKeyEnv': 'Leer lassen, um die Umgebungsvariable {name} zu verwenden.',
   'onboarding.done.tipBefore': 'Mit',
   'onboarding.done.tipAfter': 'öffnest du den Assistenten jederzeit.',
+  'onboarding.ai.unlisted.title': 'Der Endpunkt führt „{model}“ nicht',
+  'onboarding.ai.unlisted.text': 'Zugangsdaten und Endpunkt funktionieren, aber das Modell fehlt in der Modellliste des Endpunkts. Manche Server und Proxys listen nicht jedes Modell, das sie anbieten. Du kannst eines der angebotenen Modelle wählen oder den Provider trotzdem hinzufügen; er wird dann ohne weitere Prüfung gespeichert.',
+  'onboarding.ai.unlisted.offered': 'Angebotene Modelle',
+  'onboarding.ai.unlisted.add': 'Trotzdem hinzufügen',
+  'view.label': 'Ansicht',
+  'view.source': 'Quelltext',
+  'view.preview': 'Vorschau',
 };

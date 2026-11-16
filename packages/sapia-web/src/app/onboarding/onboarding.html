@@ -104,6 +104,36 @@
             }
           }
         </div>
+        @if (test(); as state) {
+          @if (state.status === 'unlisted') {
+            <div class="unlisted" role="alertdialog" aria-labelledby="ob-unlisted-title" aria-describedby="ob-unlisted-text">
+              <div class="unlisted-head">
+                <sapia-icon name="alert" [size]="17" />
+                <div>
+                  <strong id="ob-unlisted-title">{{ t('onboarding.ai.unlisted.title', { model: model() }) }}</strong>
+                  <p id="ob-unlisted-text">{{ t('onboarding.ai.unlisted.text') }}</p>
+                </div>
+              </div>
+              @if (state.models.length) {
+                <span class="unlisted-caption">{{ t('onboarding.ai.unlisted.offered') }}</span>
+                <div class="unlisted-models">
+                  @for (id of state.models; track id) {
+                    <button class="model-chip" (click)="pickModel(id)">{{ id }}</button>
+                  }
+                </div>
+              }
+              <div class="unlisted-actions">
+                <button class="text-button ghost" (click)="test.set({ status: 'idle' })">{{ t('action.cancel') }}</button>
+                <button class="text-button warn" [disabled]="saving()" (click)="addAnyway()">
+                  @if (saving()) {
+                    <sapia-icon name="loader" class="spin" [size]="14" />
+                  }
+                  {{ t('onboarding.ai.unlisted.add') }}
+                </button>
+              </div>
+            </div>
+          }
+        }
         @if (saveError(); as error) {
           <p class="result failed block"><sapia-icon name="alert" [size]="15" /> {{ error }}</p>
         }

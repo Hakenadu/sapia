@@ -149,7 +149,7 @@ export class AiService implements AiBackend {
           if (/\b(401|403)\b|ENOTFOUND|ECONNREFUSED|fetch failed|Invalid URL/i.test(message)) return { ok: false, message };
         }
         if (models?.length && !models.includes(provider.model)) {
-          return { ok: false, message: `The endpoint does not offer the model "${provider.model}".`, models };
+          return { ok: false, reason: 'model-not-listed', message: `The endpoint does not offer the model "${provider.model}".`, models };
         }
       }
       await generateText({ model, prompt: 'Reply with the single word: ok', maxRetries: 0, abortSignal: AbortSignal.timeout(30000) });

@@ -190,17 +190,52 @@ export class Preview implements OnDestroy {
     }
   }
 
+  /** Active touch / pen / mouse pointers, for pinch zoom with two fingers. */
+  private readonly pointers = new Map<number, { x: number; y: number }>();
+  private pinch: { distance: number; midX: number; midY: number; scale: number; x: number; y: number } | null = null;
+
+  private pinchState(): { distance: number; midX: number; midY: number } {
+    const [a, b] = [...this.pointers.values()];
+    const rect = this.viewport().nativeElement.getBoundingClientRect();
+    return { distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), midX: (a.x + b.x) / 2 - rect.left, midY: (a.y + b.y) / 2 - rect.top };
+  }
+
   protected onPointerDown(event: PointerEvent): void {
     if (event.button !== 0 || !this.hasDiagram()) return;
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this.pointers.size === 2) {
+      // A second finger turns the gesture into a pinch; it never counts as a tap.
+      const viewport = this.viewport().nativeElement;
+      for (const id of this.pointers.keys()) if (!viewport.hasPointerCapture(id)) viewport.setPointerCapture(id);
+      this.drag = null;
+      this.pinch = { ...this.pinchState(), scale: this.scale(), x: this.x(), y: this.y() };
+      this.panning.set(true);
+      this.setHovered(null);
+      return;
+    }
+    if (this.pointers.size > 2) return;
     this.drag = { startX: event.clientX, startY: event.clientY, originX: this.x(), originY: this.y(), moved: false, pointerId: event.pointerId };
   }
 
   protected onPointerMove(event: PointerEvent): void {
+    if (this.pointers.has(event.pointerId)) this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const pinch = this.pinch;
+    if (pinch && this.pointers.size >= 2) {
+      const now = this.pinchState();
+      const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, pinch.scale * (now.distance / pinch.distance)));
+      const ratio = scale / pinch.scale;
+      // Keep the point under the fingers' midpoint in place while zooming and moving.
+      this.autoFit = false;
+      this.apply(scale, now.midX - (pinch.midX - pinch.x) * ratio, now.midY - (pinch.midY - pinch.y) * ratio, false);
+      return;
+    }
     const drag = this.drag;
     if (drag) {
       const dx = event.clientX - drag.startX;
       const dy = event.clientY - drag.startY;
-      if (!drag.moved && Math.hypot(dx, dy) > 4) {
+      // Fingers wobble more than a mouse: allow more slack before a tap becomes a pan.
+      const slop = event.pointerType === 'mouse' ? 4 : 10;
+      if (!drag.moved && Math.hypot(dx, dy) > slop) {
         drag.moved = true;
         this.panning.set(true);
         this.viewport().nativeElement.setPointerCapture(drag.pointerId);
@@ -212,21 +247,40 @@ export class Preview implements OnDestroy {
       }
       return;
     }
-    this.setHovered(this.findLocatable(event.target));
+    if (event.pointerType === 'mouse') this.setHovered(this.findLocatable(event.target));
   }
 
   protected onPointerUp(event: PointerEvent): void {
+    const viewport = this.viewport().nativeElement;
+    this.pointers.delete(event.pointerId);
+    if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+    if (this.pinch) {
+      if (this.pointers.size < 2) this.pinch = null;
+      if (this.pointers.size === 0) this.panning.set(false);
+      // Lifting one finger after a pinch must not start a pan from a stale origin.
+      this.drag = null;
+      return;
+    }
     const drag = this.drag;
     this.drag = null;
     this.panning.set(false);
-    if (!drag) return;
-    if (drag.moved) {
-      this.viewport().nativeElement.releasePointerCapture(drag.pointerId);
-      return;
-    }
+    if (!drag || drag.pointerId !== event.pointerId || event.type === 'pointercancel') return;
+    if (drag.moved) return;
     const target = document.elementFromPoint(event.clientX, event.clientY);
     const path = this.pathOf(target);
-    if (path.length) this.locate.emit(path);
+    if (path.length) {
+      // On touch there is no hover; flash the tapped element instead.
+      if (event.pointerType !== 'mouse') this.flash(this.findLocatable(target));
+      this.locate.emit(path);
+    }
+  }
+
+  private flash(element: Element | null): void {
+    if (!element) return;
+    this.setHovered(element);
+    setTimeout(() => {
+      if (this.hovered === element) this.setHovered(null);
+    }, 650);
   }
 
   protected onPointerLeave(): void {

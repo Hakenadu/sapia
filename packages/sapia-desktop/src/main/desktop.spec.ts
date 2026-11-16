@@ -299,7 +299,7 @@ describe('HostService with a fake OpenAI compatible server', () => {
     expect(bad.ok).toBe(false);
     expect(bad.message).toContain('401');
     const unknown = await host.ai.testProvider({ type: 'openai-chat', model: 'nope', baseUrl, apiKey: 'sk-good' });
-    expect(unknown).toMatchObject({ ok: false, models: ['model-a', 'model-b'] });
+    expect(unknown).toMatchObject({ ok: false, reason: 'model-not-listed', models: ['model-a', 'model-b'] });
     const good = await host.ai.testProvider({ type: 'openai-chat', model: 'model-a', baseUrl, apiKey: 'sk-good' });
     expect(good).toMatchObject({ ok: true, models: ['model-a', 'model-b'] });
     const type = await host.ai.testProvider({ type: 'made-up', model: 'x' });

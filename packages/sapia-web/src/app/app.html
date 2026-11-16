@@ -17,6 +17,21 @@
 
     <span class="grow"></span>
 
+    @if (layout() === 'tabs') {
+      <div class="view-switch" role="tablist" [attr.aria-label]="t('view.label')">
+        <button role="tab" [class.active]="pane() === 'editor'" [attr.aria-selected]="pane() === 'editor'" (click)="showPane('editor')">
+          <sapia-icon name="pencil" [size]="15" /> {{ t('view.source') }}
+          @if (ws.errorCount(); as errors) {
+            <span class="dot-badge">{{ errors }}</span>
+          }
+        </button>
+        <button role="tab" [class.active]="pane() === 'preview'" [attr.aria-selected]="pane() === 'preview'" (click)="showPane('preview')">
+          <sapia-icon name="image" [size]="15" /> {{ t('view.preview') }}
+        </button>
+      </div>
+      <span class="grow"></span>
+    }
+
     <button class="icon-button rail-button" [matMenuTriggerFor]="languageMenu" [matTooltip]="t('action.language')" matTooltipPosition="right" [attr.aria-label]="t('action.language')">
       <sapia-icon name="languages" [size]="18" />
     </button>
@@ -29,8 +44,11 @@
   </nav>
 
   <!-- Library --------------------------------------------------------------->
+  @if (libraryOpen() && overlayLibrary()) {
+    <div class="library-backdrop" (click)="libraryOpen.set(false)"></div>
+  }
   @if (libraryOpen()) {
-    <sapia-library-panel class="library" (opened)="open($event)" (deleted)="remove($event)" (created)="newDiagram()" (closed)="libraryOpen.set(false)" />
+    <sapia-library-panel class="library" [class.overlay]="overlayLibrary()" (opened)="open($event)" (deleted)="remove($event)" (created)="newDiagram()" (closed)="libraryOpen.set(false)" />
   }
 
   <div class="main">
@@ -75,7 +93,7 @@
         <sapia-icon name="chevron-down" [size]="13" />
       </button>
 
-      <button class="ai-button" [class.active]="aiOpen()" (click)="toggleAi()" [attr.aria-pressed]="aiOpen()">
+      <button class="ai-button" [attr.aria-label]="t('action.ai')" [class.active]="aiOpen()" (click)="toggleAi()" [attr.aria-pressed]="aiOpen()">
         <sapia-icon name="sparkles" [size]="15" />
         <span>{{ t('action.ai') }}</span>
         <span class="kbds">
@@ -96,7 +114,7 @@
     </header>
 
     <!-- Workspace ----------------------------------------------------------->
-    <main class="workspace" #workspace [style.--split.%]="split()">
+    <main class="workspace" #workspace [attr.data-layout]="layout()" [attr.data-pane]="pane()" [style.--split.%]="split()">
       <section class="pane editor-pane" [attr.aria-label]="t('editor.title')">
         <sapia-code-editor
           class="editor"
@@ -138,7 +156,7 @@
         class="divider"
         role="separator"
         tabindex="0"
-        aria-orientation="vertical"
+        [attr.aria-orientation]="layout() === 'rows' ? 'horizontal' : 'vertical'"
         [attr.aria-valuenow]="split()"
         aria-valuemin="22"
         aria-valuemax="78"
@@ -146,6 +164,8 @@
         (dblclick)="resetSplit()"
         (keydown.arrowLeft)="nudgeSplit(-2)"
         (keydown.arrowRight)="nudgeSplit(2)"
+        (keydown.arrowUp)="nudgeSplit(-2)"
+        (keydown.arrowDown)="nudgeSplit(2)"
       >
         <i></i>
       </div>
