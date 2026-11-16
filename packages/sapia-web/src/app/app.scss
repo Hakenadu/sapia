@@ -88,6 +88,7 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .topbar {
@@ -480,5 +481,191 @@ button.status-item {
   }
   .status-item.dim {
     display: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Responsive layouts
+// ---------------------------------------------------------------------------
+.shell {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+// Library floating over the workspace (tablets, small windows).
+.library.overlay {
+  position: fixed;
+  z-index: 800;
+  top: calc(8px + env(safe-area-inset-top));
+  bottom: 8px;
+  left: calc(64px + env(safe-area-inset-left));
+  width: min(340px, calc(100vw - 80px));
+  height: auto;
+  margin: 0;
+  box-shadow: var(--shadow-3);
+}
+.library-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 799;
+  background: light-dark(rgba(20, 24, 40, 0.18), rgba(2, 3, 6, 0.5));
+  backdrop-filter: blur(2px);
+  animation: sapia-fade-in 0.2s var(--ease);
+}
+
+// Portrait tablets: editor above, preview below.
+.workspace[data-layout='rows'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, calc(var(--split) - 5px)) 10px minmax(0, 1fr);
+
+  .divider {
+    cursor: row-resize;
+    i {
+      width: 36px;
+      height: 3px;
+    }
+  }
+}
+:host(.resizing)[data-layout='rows'] {
+  cursor: row-resize;
+  .divider i {
+    width: 64px;
+    height: 3px;
+  }
+}
+
+// Phones: one pane at a time, switched from the bottom bar.
+.workspace[data-layout='tabs'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0 8px;
+
+  .divider {
+    display: none;
+  }
+  &[data-pane='editor'] .preview-pane,
+  &[data-pane='preview'] .editor-pane {
+    display: none;
+  }
+}
+
+.view-switch {
+  display: none;
+}
+
+:host([data-layout='tabs']) {
+  .shell {
+    flex-direction: column;
+  }
+  .rail {
+    order: 3;
+    flex-direction: row;
+    width: auto;
+    height: auto;
+    gap: 2px;
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface-1) 85%, transparent);
+    backdrop-filter: blur(16px);
+  }
+  .logo {
+    display: none;
+  }
+  .view-switch {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--surface-3);
+
+    button {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 34px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s var(--ease);
+
+      &.active {
+        background: var(--surface-1);
+        color: var(--text);
+        box-shadow: var(--shadow-1);
+      }
+    }
+  }
+  .dot-badge {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+  }
+  .library.overlay {
+    top: calc(8px + env(safe-area-inset-top));
+    left: 8px;
+    right: 8px;
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    width: auto;
+  }
+  .topbar {
+    gap: 4px;
+    height: 50px;
+    padding: 0 6px 0 4px;
+  }
+  .title {
+    max-width: 42vw;
+  }
+  .detected {
+    margin-left: 0;
+    padding: 0 5px;
+    > sapia-icon {
+      margin: 0 1px;
+    }
+    .type {
+      display: none;
+    }
+  }
+  .ai-button {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+    span {
+      display: none;
+    }
+  }
+  .status {
+    height: 28px;
+    padding: 0 10px 0 4px;
+  }
+  .status-item.mono,
+  .status-item.dim {
+    display: none;
+  }
+}
+
+// Larger touch targets wherever the primary pointer is a finger.
+@media (pointer: coarse) {
+  .rail-button {
+    width: 42px;
+    height: 42px;
+  }
+  .topbar .icon-button,
+  .topbar .text-button,
+  .topbar .ai-button {
+    min-height: 38px;
+  }
+  .problems li button {
+    padding: 10px 8px;
   }
 }

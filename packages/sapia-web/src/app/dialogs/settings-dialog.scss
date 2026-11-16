@@ -245,3 +245,23 @@ section {
     padding-left: 20px;
   }
 }
+
+@media (max-width: 639px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    height: min(76dvh, 620px);
+  }
+  nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+
+    button {
+      flex: none;
+    }
+  }
+}

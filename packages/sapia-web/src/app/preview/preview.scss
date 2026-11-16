@@ -31,7 +31,6 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  will-change: transform;
   animation: sapia-fade-in 0.3s var(--ease);
 
   &.stale {
@@ -206,4 +205,10 @@
 }
 :host(:hover) .hint {
   opacity: 1;
+}
+
+// Only promote the stage to its own layer while it moves: a permanent layer is
+// rasterised once and turns blurry when zoomed in.
+.viewport.panning .stage {
+  will-change: transform;
 }

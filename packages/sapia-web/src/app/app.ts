@@ -43,6 +43,8 @@ interface Problem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(window:keydown)': 'onKeydown($event)',
+    '(window:resize)': 'onResize()',
+    '[attr.data-layout]': 'layout()',
     '[class.resizing]': 'resizing()',
   },
 })
@@ -63,6 +65,23 @@ export class App {
   protected readonly problemsOpen = signal(false);
   protected readonly resizing = signal(false);
   protected readonly split = signal(this.readSplit());
+
+  // -- responsive layout -------------------------------------------------------
+  private readonly windowSize = signal({ width: window.innerWidth, height: window.innerHeight });
+  /**
+   * `columns`: editor and preview side by side (desktop, landscape tablets).
+   * `rows`: stacked (portrait tablets). `tabs`: one at a time (phones).
+   */
+  protected readonly layout = computed<'columns' | 'rows' | 'tabs'>(() => {
+    const { width, height } = this.windowSize();
+    if (width < 700) return 'tabs';
+    if (width < 1000 && height > width) return 'rows';
+    return 'columns';
+  });
+  /** Visible pane in the `tabs` layout. */
+  protected readonly pane = signal<'editor' | 'preview'>('editor');
+  /** Below this width the library floats over the workspace instead of pushing it aside. */
+  protected readonly overlayLibrary = computed(() => this.windowSize().width < 1100);
 
   protected readonly themes: { id: ThemePreference; icon: IconName }[] = [
     { id: 'system', icon: 'system' },
@@ -103,6 +122,14 @@ export class App {
     effect(() => {
       if (this.ws.diagnostics().length === 0) this.problemsOpen.set(false);
     });
+  }
+
+  protected onResize(): void {
+    this.windowSize.set({ width: window.innerWidth, height: window.innerHeight });
+  }
+
+  protected showPane(pane: 'editor' | 'preview'): void {
+    this.pane.set(pane);
   }
 
   // -- keyboard ----------------------------------------------------------------
@@ -238,6 +265,8 @@ export class App {
   // -- preview -----------------------------------------------------------------
   protected onLocate(path: RenderedElement[]): void {
     if (!this.ws.locate(path)) this.snack.open(this.t('preview.notLocated'), undefined, { duration: 2200 });
+    // On phones the editor is hidden behind the preview: bring it forward to show the source.
+    else if (this.layout() === 'tabs') this.pane.set('editor');
   }
 
   protected onExported(kind: 'svg' | 'png' | 'copy'): void {
@@ -245,6 +274,7 @@ export class App {
   }
 
   protected goTo(problem: Problem): void {
+    this.pane.set('editor');
     this.ws.revealRange({ from: problem.diagnostic.from, to: problem.diagnostic.to });
   }
 
@@ -279,7 +309,7 @@ export class App {
     this.resizing.set(true);
     const move = (e: PointerEvent): void => {
       const rect = container.getBoundingClientRect();
-      const percent = ((e.clientX - rect.left) / rect.width) * 100;
+      const percent = this.layout() === 'rows' ? ((e.clientY - rect.top) / rect.height) * 100 : ((e.clientX - rect.left) / rect.width) * 100;
       this.split.set(Math.round(Math.min(78, Math.max(22, percent)) * 10) / 10);
     };
     const stop = (): void => {
