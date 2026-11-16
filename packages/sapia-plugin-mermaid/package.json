@@ -1,6 +1,6 @@
 {
   "name": "@sapia/plugin-mermaid",
-  "version": "0.1.2-snapshot.0",
+  "version": "0.1.3-snapshot.0",
   "description": "Mermaid language support for Sapia: detection, highlighting, completion, validation, rendering and metamodel converters.",
   "license": "MIT",
   "keywords": [
@@ -45,7 +45,7 @@
     "mermaid": "^12.3.0"
   },
   "peerDependencies": {
-    "@sapia/core": "^0.1.2-snapshot.0"
+    "@sapia/core": "^0.1.3-snapshot.0"
   },
   "engines": {
     "node": ">=22"
