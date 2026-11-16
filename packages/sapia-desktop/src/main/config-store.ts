@@ -82,6 +82,7 @@ export class ConfigStore {
     const raw = { ...this.raw };
     if (preferences.locale !== undefined) raw['locale'] = preferences.locale;
     if (preferences.theme !== undefined) raw['theme'] = preferences.theme;
+    if (preferences.diagramTheme !== undefined) raw['diagramTheme'] = preferences.diagramTheme;
     return this.write(raw);
   }
 }

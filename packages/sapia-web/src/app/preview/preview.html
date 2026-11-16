@@ -13,7 +13,7 @@
   (pointerleave)="onPointerLeave()"
   (dblclick)="onDoubleClick($event)"
 >
-  <div #stage class="stage" [class.stale]="stale()" [style.transform]="transform()"></div>
+  <div #stage class="stage" [class.paper]="!adaptive()" [class.stale]="stale()" [style.transform]="transform()"></div>
 </div>
 
 @if (state() === 'rendering') {

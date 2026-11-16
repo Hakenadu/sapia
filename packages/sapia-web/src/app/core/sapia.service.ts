@@ -88,7 +88,9 @@ export class SapiaService {
     this.plugins.set(this.core.plugins.list());
 
     this.applyLocale(config, bootstrap);
-    this.theme.initialise(config.theme, !!this.host);
+    this.theme.initialise(config.theme, config.diagramTheme, !!this.host);
+    const host = this.host;
+    if (host) this.theme.persist = (preferences) => void host.updatePreferences(preferences);
   }
 
   /** The web app reads an optional `config.json` next to its deployment. */

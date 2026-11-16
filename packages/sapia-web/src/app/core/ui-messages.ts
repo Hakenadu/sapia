@@ -33,6 +33,11 @@ export const uiMessagesEn: Messages = {
   'theme.system': 'System',
   'theme.light': 'Light',
   'theme.dark': 'Dark',
+  'diagramTheme.caption': 'Diagram colours',
+  'diagramTheme.adaptive': 'Adaptive',
+  'diagramTheme.adaptive.hint': 'Follows light and dark mode and adapts custom colours',
+  'diagramTheme.static': 'Static',
+  'diagramTheme.static.hint': 'Original light colours on white, in every mode',
 
   'locale.en': 'English',
   'locale.de': 'Deutsch',
@@ -243,6 +248,11 @@ export const uiMessagesDe: Messages = {
   'theme.system': 'System',
   'theme.light': 'Hell',
   'theme.dark': 'Dunkel',
+  'diagramTheme.caption': 'Diagrammfarben',
+  'diagramTheme.adaptive': 'Dynamisch',
+  'diagramTheme.adaptive.hint': 'Folgt Hell- und Dunkelmodus und passt eigene Farben an',
+  'diagramTheme.static': 'Statisch',
+  'diagramTheme.static.hint': 'Originale helle Farben auf Weiß, in jedem Modus',
 
   'locale.en': 'English',
   'locale.de': 'Deutsch',

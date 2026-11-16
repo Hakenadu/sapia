@@ -97,7 +97,14 @@ describe('config', () => {
     const { config, issues } = normalizeConfig(undefined);
     expect(issues).toEqual([]);
     expect(config.theme).toBe('system');
+    expect(config.diagramTheme).toBe('adaptive');
     expect(config.ai.enabled).toBe(false);
+  });
+  it('reads the diagram theme mode', () => {
+    expect(normalizeConfig({ diagramTheme: 'static' }).config.diagramTheme).toBe('static');
+    const { config, issues } = normalizeConfig({ diagramTheme: 'sepia' });
+    expect(config.diagramTheme).toBe('adaptive');
+    expect(issues).toEqual(['diagramTheme must be "adaptive" or "static"']);
   });
   it('validates and reports issues without throwing', () => {
     const { config, issues } = normalizeConfig({

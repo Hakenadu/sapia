@@ -7,6 +7,12 @@ export interface SapiaConfig {
   /** `auto` follows the system; otherwise a locale id such as `en` or `de`. */
   locale: string;
   theme: ThemePreference;
+  /**
+   * `adaptive` renders diagrams in the colours of the active UI theme and
+   * adapts explicit diagram colours for dark mode; `static` always renders
+   * the light look on a white canvas, regardless of the UI theme.
+   */
+  diagramTheme: DiagramThemeMode;
   editor: EditorConfig;
   /** Additional plugins: npm package names, local paths or URLs. */
   plugins: PluginReference[];
@@ -20,6 +26,8 @@ export interface SapiaConfig {
 }
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+
+export type DiagramThemeMode = 'adaptive' | 'static';
 
 export interface EditorConfig {
   fontSize: number;
@@ -109,6 +117,7 @@ export const DEFAULT_CONFIG: SapiaConfig = {
   version: 1,
   locale: 'auto',
   theme: 'system',
+  diagramTheme: 'adaptive',
   editor: { fontSize: 14, tabSize: 2, lineNumbers: true, wordWrap: false, renderDelay: 250 },
   plugins: [],
   disabledPlugins: [],
@@ -171,6 +180,10 @@ export function normalizeConfig(raw: unknown): NormalizedConfig {
   const theme = str(raw['theme'], 'theme');
   if (theme === 'system' || theme === 'light' || theme === 'dark') config.theme = theme;
   else if (theme !== undefined) issues.push('theme must be "system", "light" or "dark"');
+
+  const diagramTheme = str(raw['diagramTheme'], 'diagramTheme');
+  if (diagramTheme === 'adaptive' || diagramTheme === 'static') config.diagramTheme = diagramTheme;
+  else if (diagramTheme !== undefined) issues.push('diagramTheme must be "adaptive" or "static"');
 
   if (isDict(raw['editor'])) {
     const e = raw['editor'];

@@ -8,7 +8,7 @@ A modern editor for text-based diagrams. Write PlantUML or Mermaid on the left, 
 - **Live preview** with pan and zoom, click-to-source, SVG and PNG export. PlantUML is rendered locally, without a server or Java.
 - **Highlighting and diagnostics** per language, with errors marked in the editor.
 - **Library** to save diagrams and open them again.
-- **Light and dark mode**, following the system by default. **English and German** UI.
+- **Light and dark mode**, following the system by default. Diagrams follow the mode too: custom colours (named, hex, `rgb()`) are adapted for dark mode and text is kept at WCAG contrast against its actual background. Switch to the static diagram theme to always see the original light colours. **English and German** UI.
 - **Plugins** for languages, converters, completion, rendering and AI tools. PlantUML and Mermaid are plugins themselves.
 - **AI assistant** in the desktop app, one shortcut away (`Ctrl/Cmd+K`), with tools to create, edit, check and convert diagrams.
 
@@ -51,6 +51,7 @@ On first start, Sapia asks for language and theme, optionally connects an AI pro
   "version": 1,
   "locale": "auto",            // "auto", "en" or "de"; unknown locales fall back to English
   "theme": "system",           // "system", "light" or "dark"
+  "diagramTheme": "adaptive",  // "adaptive": diagram colours follow light/dark mode; "static": always the light look
   "editor": { "fontSize": 14, "tabSize": 2, "lineNumbers": true, "wordWrap": false, "renderDelay": 250 },
 
   "plugins": [

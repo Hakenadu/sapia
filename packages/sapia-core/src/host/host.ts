@@ -1,5 +1,5 @@
 import type { AiBackend } from '../ai/ai';
-import type { AiProviderConfig, AiProviderTypeInfo, SapiaConfig, ThemePreference } from '../config/config';
+import type { AiProviderConfig, AiProviderTypeInfo, DiagramThemeMode, SapiaConfig, ThemePreference } from '../config/config';
 import type { DiagramStore } from '../storage/store';
 
 /** A plugin the host resolved and can serve to the UI as an ES module. */
@@ -51,6 +51,7 @@ export interface ProviderTestResult {
 export interface HostPreferences {
   locale?: string;
   theme?: ThemePreference;
+  diagramTheme?: DiagramThemeMode;
 }
 
 /**

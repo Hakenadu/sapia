@@ -212,3 +212,13 @@
 .viewport.panning .stage {
   will-change: transform;
 }
+
+// Static diagram theme: the diagram keeps its own (light) colours and sits on
+// a sheet of paper, also in dark mode.
+.stage.paper ::ng-deep > svg {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 6%),
+    0 8px 28px -10px rgb(0 0 0 / 35%);
+}
