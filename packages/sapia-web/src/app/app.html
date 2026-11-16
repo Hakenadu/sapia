@@ -173,6 +173,8 @@
       <section class="pane preview-pane" [attr.aria-label]="t('preview.title')">
         <sapia-preview
           [svg]="ws.svg()"
+          [theme]="ws.svgTheme()"
+          [adaptive]="theme.diagramMode() === 'adaptive'"
           [state]="ws.previewState()"
           [stale]="ws.previewStale()"
           [failure]="ws.renderFailure()"
@@ -242,6 +244,20 @@
       <sapia-icon [name]="option.icon" />
       <span class="menu-label">{{ t('theme.' + option.id) }}</span>
       @if (theme.preference() === option.id) {
+        <sapia-icon class="menu-trailing" name="check" [size]="14" />
+      }
+    </button>
+  }
+  <div class="menu-divider"></div>
+  <div class="menu-caption">{{ t('diagramTheme.caption') }}</div>
+  @for (option of diagramThemes; track option.id) {
+    <button mat-menu-item class="menu-rich" (click)="theme.setDiagramMode(option.id)">
+      <sapia-icon [name]="option.icon" />
+      <span class="menu-label">
+        {{ t('diagramTheme.' + option.id) }}
+        <small>{{ t('diagramTheme.' + option.id + '.hint') }}</small>
+      </span>
+      @if (theme.diagramMode() === option.id) {
         <sapia-icon class="menu-trailing" name="check" [size]="14" />
       }
     </button>

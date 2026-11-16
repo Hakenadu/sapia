@@ -74,9 +74,9 @@ describe('ConfigStore', () => {
     await writeFile(path, JSON.stringify({ theme: 'light', custom: { keep: true }, plugins: ['x'] }));
     const store = new ConfigStore(path);
     await store.load();
-    await store.updatePreferences({ theme: 'dark', locale: 'de' });
+    await store.updatePreferences({ theme: 'dark', locale: 'de', diagramTheme: 'static' });
     const raw = JSON.parse(await readFile(path, 'utf8'));
-    expect(raw).toMatchObject({ theme: 'dark', locale: 'de', custom: { keep: true }, plugins: ['x'] });
+    expect(raw).toMatchObject({ theme: 'dark', locale: 'de', diagramTheme: 'static', custom: { keep: true }, plugins: ['x'] });
   });
 
   it('never overwrites a config it could not parse', async () => {

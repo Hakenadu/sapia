@@ -4,7 +4,7 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConversionError, LineIndex } from '@sapia/core';
-import type { Diagnostic, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
+import type { DiagramThemeMode, Diagnostic, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
 import { firstValueFrom } from 'rxjs';
 import { AiWidget } from './ai/ai-widget';
 import { I18nService } from './core/i18n.service';
@@ -87,6 +87,10 @@ export class App {
     { id: 'system', icon: 'system' },
     { id: 'light', icon: 'sun' },
     { id: 'dark', icon: 'moon' },
+  ];
+  protected readonly diagramThemes: { id: DiagramThemeMode; icon: IconName }[] = [
+    { id: 'adaptive', icon: 'contrast' },
+    { id: 'static', icon: 'palette' },
   ];
   protected readonly themeIcon = computed<IconName>(() => (this.theme.active() === 'dark' ? 'moon' : 'sun'));
 

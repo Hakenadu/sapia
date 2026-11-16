@@ -72,6 +72,8 @@ export class WorkspaceService {
 
   // -- preview -------------------------------------------------------------
   readonly svg = signal<string | null>(null);
+  /** The theme the current picture was rendered in. */
+  readonly svgTheme = signal<RenderTheme>('light');
   readonly previewState = signal<PreviewState>('empty');
   readonly renderMs = signal<number | null>(null);
   readonly renderFailure = signal<string | null>(null);
@@ -97,7 +99,7 @@ export class WorkspaceService {
       if (!this.started()) return;
       const source = this.source();
       const detection = this.detection();
-      const theme = this.theme.active();
+      const theme = this.theme.diagramTheme();
       this.i18n.locale();
       untracked(() => this.schedule(source, detection, theme));
     });
@@ -136,7 +138,7 @@ export class WorkspaceService {
     }
     if (!restored) this.newFromTemplate('plantuml', 'sequence');
     this.started.set(true);
-    this.schedule(this.source(), this.detection(), this.theme.active(), 0);
+    this.schedule(this.source(), this.detection(), this.theme.diagramTheme(), 0);
   }
 
   // -- editing -------------------------------------------------------------
@@ -278,6 +280,7 @@ export class WorkspaceService {
       this.renderMs.set(result.ms);
       this.renderFailure.set(result.failure ?? null);
       if (result.svg) {
+        this.svgTheme.set(theme);
         this.svg.set(result.svg);
         this.previewState.set('ok');
       } else if (!language.render) {
@@ -336,7 +339,7 @@ export class WorkspaceService {
     const detection = this.detection();
     let diagnostics: AiDiagnostic[] = [];
     if (detection && source.trim()) {
-      const result = await this.check(source, detection, this.theme.active());
+      const result = await this.check(source, detection, this.theme.diagramTheme());
       diagnostics = this.toAiDiagnostics(source, result.diagnostics);
       if (result.failure) diagnostics.push({ line: 1, severity: 'error', message: result.failure });
     }
@@ -381,7 +384,7 @@ export class WorkspaceService {
     checkSource: async (source) => {
       const detection = this.sapia.core.languages.detect(source);
       if (!detection) return { languageId: null, diagramType: null, diagnostics: [] };
-      const result = await this.check(source, detection, this.theme.active());
+      const result = await this.check(source, detection, this.theme.diagramTheme());
       const diagnostics = this.toAiDiagnostics(source, result.diagnostics);
       if (result.failure) diagnostics.push({ line: 1, severity: 'error', message: result.failure });
       return { languageId: detection.languageId, diagramType: detection.diagramType, diagnostics };

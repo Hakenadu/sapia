@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, injec
 import type { OnDestroy } from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import type { RenderedElement, TextRange } from '@sapia/core';
+import type { RenderTheme, RenderedElement, TextRange } from '@sapia/core';
 import { I18nService } from '../core/i18n.service';
 import type { PreviewState } from '../core/workspace.service';
 import { Icon } from '../ui/icon';
+import { adaptDiagramColors } from './diagram-colors';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
@@ -53,6 +54,10 @@ export class Preview implements OnDestroy {
   protected readonly t = this.i18n.t;
 
   readonly svg = input<string | null>(null);
+  /** The theme `svg` was rendered in. */
+  readonly theme = input<RenderTheme>('light');
+  /** Adapt explicit diagram colours to the theme; otherwise show the diagram as-is on white paper. */
+  readonly adaptive = input(true);
   readonly state = input<PreviewState>('empty');
   readonly stale = input(false);
   readonly failure = input<string | null>(null);
@@ -89,8 +94,10 @@ export class Preview implements OnDestroy {
   private readonly resizeObserver: ResizeObserver;
   private drag: { startX: number; startY: number; originX: number; originY: number; moved: boolean; pointerId: number } | null = null;
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   constructor() {
-    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    const host = this.host;
     this.resizeObserver = new ResizeObserver(() => {
       if (this.autoFit) this.fit(false);
     });
@@ -98,6 +105,8 @@ export class Preview implements OnDestroy {
 
     effect(() => {
       const svg = this.svg();
+      const theme = this.theme();
+      const adaptive = this.adaptive();
       const stage = this.stage().nativeElement;
       untracked(() => {
         this.hovered = null;
@@ -123,10 +132,35 @@ export class Preview implements OnDestroy {
         element.style.display = 'block';
         element.removeAttribute('width');
         element.removeAttribute('height');
+        if (adaptive) this.adaptColors(element, theme);
         stage.replaceChildren(element);
         if (this.autoFit || previous.width === 0) this.fit(false);
       });
     });
+  }
+
+  /**
+   * Colour adaptation needs computed styles and geometry, so the picture is
+   * laid out off-screen first (the preview itself may be hidden, e.g. in the
+   * phone layout).
+   */
+  private adaptColors(svg: SVGSVGElement, theme: RenderTheme): void {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none;contain:layout style';
+    host.append(svg);
+    document.body.append(host);
+    try {
+      adaptDiagramColors(svg, theme, this.canvasColor());
+    } catch (e) {
+      console.warn('Sapia: could not adapt diagram colours', e);
+    } finally {
+      host.remove();
+    }
+  }
+
+  /** The resolved canvas colour (`--canvas-bg` uses light-dark(), so read the painted value). */
+  private canvasColor(): string {
+    return getComputedStyle(this.host.nativeElement).backgroundColor || '#ffffff';
   }
 
   private measure(svg: SVGSVGElement): { width: number; height: number } {
@@ -380,7 +414,7 @@ export class Preview implements OnDestroy {
       canvas.width = Math.ceil(svg.width * ratio);
       canvas.height = Math.ceil(svg.height * ratio);
       const context = canvas.getContext('2d')!;
-      context.fillStyle = getComputedStyle(this.viewport().nativeElement).getPropertyValue('--canvas-bg').trim() || '#ffffff';
+      context.fillStyle = this.adaptive() ? this.canvasColor() : '#ffffff';
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       canvas.toBlob((blob) => {

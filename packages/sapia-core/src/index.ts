@@ -12,3 +12,4 @@ export * from './ai/ai';
 export * from './plugin/plugin';
 export * from './host/host';
 export * from './sapia';
+export * from './color/color';
