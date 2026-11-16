@@ -1,3 +1,5 @@
+import { normalizeShareBase } from '../share/share';
+
 /**
  * Sapia configuration. The web app loads it (optionally) from `/config.json`
  * next to its deployment, the desktop app from `~/.sapia/config.json`.
@@ -13,6 +15,12 @@ export interface SapiaConfig {
    * the light look on a white canvas, regardless of the UI theme.
    */
   diagramTheme: DiagramThemeMode;
+  /**
+   * Address of a Sapia web deployment that share links point to, e.g.
+   * `https://sapia.example.com/`. The web app defaults to its own address;
+   * the desktop app falls back to `sapia://` links it opens itself.
+   */
+  shareBaseUrl?: string;
   editor: EditorConfig;
   /** Additional plugins: npm package names, local paths or URLs. */
   plugins: PluginReference[];
@@ -184,6 +192,13 @@ export function normalizeConfig(raw: unknown): NormalizedConfig {
   const diagramTheme = str(raw['diagramTheme'], 'diagramTheme');
   if (diagramTheme === 'adaptive' || diagramTheme === 'static') config.diagramTheme = diagramTheme;
   else if (diagramTheme !== undefined) issues.push('diagramTheme must be "adaptive" or "static"');
+
+  const shareBaseUrl = str(raw['shareBaseUrl'], 'shareBaseUrl');
+  if (shareBaseUrl !== undefined) {
+    const normalized = normalizeShareBase(shareBaseUrl);
+    if (normalized) config.shareBaseUrl = normalized;
+    else issues.push('shareBaseUrl must be an http(s) URL');
+  }
 
   if (isDict(raw['editor'])) {
     const e = raw['editor'];

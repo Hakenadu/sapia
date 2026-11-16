@@ -13,3 +13,4 @@ export * from './plugin/plugin';
 export * from './host/host';
 export * from './sapia';
 export * from './color/color';
+export * from './share/share';

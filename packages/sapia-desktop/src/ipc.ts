@@ -18,6 +18,10 @@ export const Ipc = {
   aiToolResult: 'sapia:ai:tool-result',
   showConfigFile: 'sapia:config:show',
   openExternal: 'sapia:open-external',
+  /** renderer → main: share links received before the page was ready. */
+  takeLinks: 'sapia:links:take',
+  /** main → renderer: a share link the operating system handed over. */
+  openLink: 'sapia:links:open',
 } as const;
 
 export interface ToolResultMessage {

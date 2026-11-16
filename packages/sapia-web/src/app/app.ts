@@ -3,7 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ConversionError, LineIndex } from '@sapia/core';
+import { ConversionError, DESKTOP_SHARE_BASE, LineIndex, ShareError, createShareLink, decodeSharedDiagram, sharePayloadFrom } from '@sapia/core';
 import type { DiagramThemeMode, Diagnostic, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
 import { firstValueFrom } from 'rxjs';
 import { AiWidget } from './ai/ai-widget';
@@ -17,6 +17,8 @@ import type { ConfirmData } from './dialogs/confirm-dialog';
 import { NewDiagramDialog } from './dialogs/new-diagram-dialog';
 import type { NewDiagramResult } from './dialogs/new-diagram-dialog';
 import { SettingsDialog } from './dialogs/settings-dialog';
+import { ShareDialog } from './dialogs/share-dialog';
+import type { ShareDialogData } from './dialogs/share-dialog';
 import { CodeEditor } from './editor/code-editor';
 import { LibraryPanel } from './library/library-panel';
 import { Onboarding } from './onboarding/onboarding';
@@ -126,6 +128,56 @@ export class App {
     effect(() => {
       if (this.ws.diagnostics().length === 0) this.problemsOpen.set(false);
     });
+    // Share links: the web app reads its own fragment, the desktop app gets links from the OS.
+    setTimeout(() => this.openLinkFromLocation());
+    window.addEventListener('hashchange', () => this.openLinkFromLocation());
+    this.sapia.host?.onOpenLink((link) => void this.openSharedLink(link));
+  }
+
+  // -- sharing -------------------------------------------------------------------
+  /** Where share links point: a configured web deployment, this web app, or the desktop app itself. */
+  private shareBase(): { base: string; desktop: boolean } {
+    const configured = this.sapia.config().shareBaseUrl;
+    if (configured) return { base: configured, desktop: false };
+    if (this.sapia.host) return { base: DESKTOP_SHARE_BASE, desktop: true };
+    return { base: location.href.split('#')[0], desktop: false };
+  }
+
+  protected async share(): Promise<void> {
+    const { base, desktop } = this.shareBase();
+    const link = await createShareLink({ name: this.ws.name(), source: this.ws.source() }, base);
+    this.dialog.open<ShareDialog, ShareDialogData>(ShareDialog, { data: { mode: 'share', name: this.ws.name(), link, desktopLink: desktop } });
+  }
+
+  protected async openLinkDialog(error?: string): Promise<void> {
+    const ref = this.dialog.open<ShareDialog, ShareDialogData, string>(ShareDialog, { data: { mode: 'open', error } });
+    const link = await firstValueFrom(ref.afterClosed());
+    if (link) await this.openSharedLink(link);
+  }
+
+  private openLinkFromLocation(): void {
+    if (this.sapia.host || !sharePayloadFrom(location.hash)) return;
+    const link = location.href;
+    // The diagram now lives in the working copy; keep it out of the address bar and history.
+    history.replaceState(null, '', location.href.split('#')[0]);
+    void this.openSharedLink(link);
+  }
+
+  private async openSharedLink(link: string): Promise<void> {
+    const payload = sharePayloadFrom(link);
+    if (!payload) return void this.snack.open(this.t('share.invalid'), undefined, { duration: 4000 });
+    let diagram;
+    try {
+      diagram = await decodeSharedDiagram(payload);
+    } catch (e) {
+      const reason = e instanceof ShareError ? e.reason : 'damaged';
+      return void this.snack.open(this.t(reason === 'version' ? 'share.version' : 'share.damaged'), undefined, { duration: 5000 });
+    }
+    if (!this.sapia.needsOnboarding() && !(await this.guardUnsaved())) return;
+    const name = diagram.name.trim() || this.t('doc.untitled');
+    this.ws.openShared(name, diagram.source);
+    this.libraryOpen.set(false);
+    this.snack.open(this.t('share.opened', { name }), undefined, { duration: 5000 });
   }
 
   protected onResize(): void {

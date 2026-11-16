@@ -74,6 +74,38 @@ function isAppUrl(url: string): boolean {
   return url.startsWith(APP_URL);
 }
 
+// -- share links --------------------------------------------------------------
+/** Share links look like `sapia://open/#d=…`; the app itself is served from `sapia://app/`. */
+const isShareLink = (value: string) => /^sapia:\/\/open\b/i.test(value) && value.includes('#');
+const pendingLinks: string[] = [];
+let rendererListening = false;
+
+function deliverLink(link: string): void {
+  if (!isShareLink(link)) return;
+  if (mainWindow && rendererListening) {
+    mainWindow.webContents.send(Ipc.openLink, link);
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  } else pendingLinks.push(link);
+}
+
+/**
+ * Lets the operating system hand `sapia://open/…` links to this app. When
+ * started through npm, Electron runs our main script, so the registration
+ * carries the arguments needed to start it again.
+ */
+function registerShareScheme(): void {
+  try {
+    if (app.isPackaged) app.setAsDefaultProtocolClient('sapia');
+    else {
+      const main = process.argv.findIndex((arg) => arg.endsWith('.cjs') || arg.endsWith('.js'));
+      app.setAsDefaultProtocolClient('sapia', process.execPath, main > 0 ? process.argv.slice(1, main + 1).map((arg) => resolve(arg)) : []);
+    }
+  } catch {
+    /* not supported here: links can still be pasted into the app */
+  }
+}
+
 function openExternal(url: string): void {
   if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
 }
@@ -150,6 +182,10 @@ function registerIpc(): void {
     else await shell.openPath(paths.home);
   });
   handle(Ipc.openExternal, (_e, url: string) => openExternal(String(url)));
+  handle(Ipc.takeLinks, () => {
+    rendererListening = true;
+    return pendingLinks.splice(0);
+  });
 }
 
 async function createWindow(): Promise<void> {
@@ -185,6 +221,11 @@ async function createWindow(): Promise<void> {
   window.on('close', () => saveWindowState(window));
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = null;
+    rendererListening = false;
+  });
+  // A reload starts a new page that asks for links again.
+  window.webContents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) rendererListening = false;
   });
 
   // The window only ever shows the app itself; links open in the browser.
@@ -229,7 +270,15 @@ if (args.includes('--version') || args.includes('-v')) {
 } else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  // A link that started the app (Windows, Linux) …
+  args.filter(isShareLink).forEach(deliverLink);
+  // … or reached it later: macOS sends open-url, the others start a second instance.
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    deliverLink(url);
+  });
+  app.on('second-instance', (_event, argv) => {
+    argv.filter(isShareLink).forEach(deliverLink);
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
@@ -246,6 +295,7 @@ if (args.includes('--version') || args.includes('-v')) {
     nativeTheme.themeSource = host.config.theme;
     protocol.handle('sapia', (request) => serveStatic(request.url, host.roots));
     registerIpc();
+    registerShareScheme();
     await createWindow();
   });
 }

@@ -49,6 +49,10 @@ const host: SapiaHost = {
   },
   showConfigFile: () => ipcRenderer.invoke(Ipc.showConfigFile),
   openExternal: (url: string) => ipcRenderer.invoke(Ipc.openExternal, url),
+  onOpenLink: (handler: (link: string) => void) => {
+    ipcRenderer.on(Ipc.openLink, (_event, link: string) => handler(link));
+    void ipcRenderer.invoke(Ipc.takeLinks).then((links: string[]) => links.forEach(handler));
+  },
 };
 
 contextBridge.exposeInMainWorld('sapiaHost', host);
