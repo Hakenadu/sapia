@@ -361,6 +361,17 @@ export class App {
     this.problemsOpen.set(false);
   }
 
+  /** Logo click: back to the start page, via the same unsaved-changes guard as "Close diagram". */
+  protected async goHome(): Promise<void> {
+    if (this.ws.isOpen()) {
+      if (!(await this.guardUnsaved())) return;
+      this.ws.close();
+    }
+    this.aiOpen.set(false);
+    this.problemsOpen.set(false);
+    this.libraryOpen.set(false);
+  }
+
   /** The editor only exists while a diagram is open; wait for it to render. */
   private focusEditor(): void {
     setTimeout(() => this.editor()?.focus());
