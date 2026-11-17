@@ -1,0 +1,177 @@
+<div class="scroller">
+  <div class="page">
+    <!-- Hero ------------------------------------------------------------------>
+    <section class="hero">
+      <div class="mascot" aria-hidden="true">
+        <span class="halo"></span>
+        <sapia-logo [size]="68" />
+      </div>
+      <div class="hero-text">
+        <p class="eyebrow">{{ greeting() }}</p>
+        <h1>{{ t('home.title') }}</h1>
+        <p class="lead">{{ t('home.lead') }}</p>
+      </div>
+    </section>
+
+    <!-- Primary actions ------------------------------------------------------->
+    <section class="actions" [attr.aria-label]="t('home.actions')">
+      @for (action of actions(); track action.id; let i = $index) {
+        <button class="action" [class.primary]="action.id === 'new'" [attr.data-action]="action.id" [style.--i]="i" (click)="run(action.id, fileInput)">
+          <span class="action-icon"><sapia-icon [name]="action.icon" [size]="20" /></span>
+          <span class="action-text">
+            <strong>{{ t('home.action.' + action.id) }}</strong>
+            <small>
+              @if (action.id === 'library') {
+                {{ t('library.count', { count: ws.library().length }) }}
+              } @else {
+                {{ t('home.action.' + action.id + '.hint') }}
+              }
+            </small>
+          </span>
+          @if (action.keys.length) {
+            <span class="kbds">
+              @for (k of action.keys; track $index) {
+                <kbd>{{ k }}</kbd>
+              }
+            </span>
+          }
+        </button>
+      }
+      <input #fileInput type="file" hidden accept=".puml,.plantuml,.pu,.iuml,.wsd,.mmd,.mermaid,.txt,.md,text/plain" (change)="onFileChosen(fileInput)" />
+    </section>
+
+    <!-- Templates and recent diagrams ----------------------------------------->
+    <div class="columns">
+      <section class="panel templates">
+        <header>
+          <h2>{{ t('home.templates') }}</h2>
+          <button class="link-button" (click)="created.emit()">{{ t('home.templates.all') }} <sapia-icon name="arrow-right" [size]="13" /></button>
+        </header>
+        <div class="template-grid">
+          @for (item of quickStarts(); track item.languageId + item.diagramType; let i = $index) {
+            <button class="template" (click)="templateChosen.emit(item)">
+              <span class="glyph" [innerHTML]="glyph(item.diagramType)"></span>
+              <span class="template-label">
+                <strong>{{ i18n.diagramType(item.diagramType) }}</strong>
+                <small>
+                  <sapia-language-badge [languageId]="item.languageId" [name]="item.languageName" [size]="14" />
+                  {{ item.languageName }}
+                </small>
+              </span>
+              <kbd class="digit">{{ i + 1 }}</kbd>
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="panel recent">
+        <header>
+          <h2>{{ t('home.recent') }}</h2>
+          @if (ws.library().length > recent().length) {
+            <button class="link-button" (click)="libraryRequested.emit()">{{ t('home.recent.all') }} <sapia-icon name="arrow-right" [size]="13" /></button>
+          }
+        </header>
+        @if (recent().length) {
+          <ul>
+            @for (diagram of recent(); track diagram.id) {
+              <li>
+                <button (click)="opened.emit(diagram)">
+                  <sapia-language-badge [languageId]="diagram.languageId" [name]="languageName(diagram.languageId)" [size]="30" />
+                  <span class="meta">
+                    <strong>{{ diagram.name }}</strong>
+                    <small>{{ i18n.diagramType(diagram.diagramType) }} · {{ i18n.relativeTime(diagram.updatedAt) }}</small>
+                  </span>
+                  <sapia-icon class="chevron" name="chevron-right" [size]="15" />
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="recent-empty">
+            <div class="sketch" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </div>
+            <strong>{{ t('home.recent.empty') }}</strong>
+            <p>{{ t('home.recent.emptyText') }}</p>
+          </div>
+        }
+      </section>
+    </div>
+
+    <!-- Desktop app (web only) ------------------------------------------------>
+    @if (!desktop) {
+      @if (promoVisible()) {
+        <section class="promo">
+          <button class="icon-button promo-close" (click)="setPromo(false)" [attr.aria-label]="t('home.promo.hide')" [title]="t('home.promo.hide')">
+            <sapia-icon name="close" [size]="15" />
+          </button>
+          <div class="promo-text">
+            <span class="pill"><sapia-icon name="system" [size]="13" /> Sapia Desktop</span>
+            <h2>{{ t('home.promo.title') }}</h2>
+            <p>{{ t('home.promo.text') }}</p>
+            <ul class="perks">
+              <li><span><sapia-icon name="sparkles" [size]="14" /></span>{{ t('home.promo.ai') }}</li>
+              <li><span><sapia-icon name="drive" [size]="14" /></span>{{ t('home.promo.files') }}</li>
+              <li><span><sapia-icon name="plugins" [size]="14" /></span>{{ t('home.promo.plugins') }}</li>
+              <li><span><sapia-icon name="link" [size]="14" /></span>{{ t('home.promo.links') }}</li>
+            </ul>
+            <div class="install">
+              <code><sapia-icon name="terminal" [size]="14" /> <span>{{ installCommand }}</span></code>
+              <button class="text-button primary" (click)="copyInstall()">
+                <sapia-icon [name]="installCopiedFlag() ? 'check' : 'copy'" [size]="14" />
+                {{ t(installCopiedFlag() ? 'home.promo.copied' : 'home.promo.copy') }}
+              </button>
+              <a class="text-button ghost" [href]="desktopUrl" target="_blank" rel="noopener">
+                {{ t('home.promo.more') }} <sapia-icon name="external" [size]="13" />
+              </a>
+            </div>
+          </div>
+          <div class="promo-art" aria-hidden="true">
+            <div class="window">
+              <div class="window-bar"><i></i><i></i><i></i></div>
+              <div class="window-body">
+                <div class="lines"><b></b><b></b><b></b><b></b><b></b></div>
+                <div class="mini-diagram">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+              <div class="ai-bar">
+                <sapia-icon name="sparkles" [size]="13" />
+                <span class="typing">{{ t('home.promo.prompt') }}</span>
+                <kbd>{{ aiKeys().join(' ') }}</kbd>
+              </div>
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    <!-- Shortcuts ------------------------------------------------------------->
+    <footer class="shortcuts" [attr.aria-label]="t('home.keys')">
+      <span class="shortcuts-title"><sapia-icon name="keyboard" [size]="15" /> {{ t('home.keys') }}</span>
+      @for (item of shortcuts(); track item.label) {
+        <span class="shortcut">
+          {{ item.label }}
+          <span class="kbds">
+            @for (k of item.keys; track $index) {
+              <kbd>{{ k }}</kbd>
+            }
+          </span>
+        </span>
+      }
+      @if (!desktop && !promoVisible()) {
+        <button class="link-button promo-restore" (click)="setPromo(true)"><sapia-icon name="system" [size]="13" /> Sapia Desktop</button>
+      }
+    </footer>
+  </div>
+</div>
+
+@if (dragging()) {
+  <div class="drop-overlay">
+    <div class="drop-card">
+      <sapia-icon name="download" [size]="28" [stroke]="1.6" />
+      <strong>{{ t('home.drop') }}</strong>
+      <small>{{ t('home.drop.hint') }}</small>
+    </div>
+  </div>
+}

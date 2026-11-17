@@ -17,7 +17,7 @@
 
     <span class="grow"></span>
 
-    @if (layout() === 'tabs') {
+    @if (layout() === 'tabs' && ws.isOpen()) {
       <div class="view-switch" role="tablist" [attr.aria-label]="t('view.label')">
         <button role="tab" [class.active]="pane() === 'editor'" [attr.aria-selected]="pane() === 'editor'" (click)="showPane('editor')">
           <sapia-icon name="pencil" [size]="15" /> {{ t('view.source') }}
@@ -52,6 +52,19 @@
   }
 
   <div class="main">
+    @if (!ws.isOpen()) {
+      <!-- Start page -------------------------------------------------------->
+      <sapia-home
+        (created)="newDiagram()"
+        (templateChosen)="startFrom($event)"
+        (libraryRequested)="libraryOpen.set(true)"
+        (opened)="open($event)"
+        (aiRequested)="toggleAi()"
+        (pasteRequested)="pasteFromClipboard()"
+        (fileDropped)="openFile($event)"
+        (installCopied)="onInstallCopied()"
+      />
+    } @else {
     <!-- Top bar ------------------------------------------------------------->
     <header class="topbar">
       <div class="doc">
@@ -216,6 +229,7 @@
       }
       <span class="status-item dim">{{ sapia.platform === 'desktop' ? 'Sapia Desktop' : 'Sapia Web' }}</span>
     </footer>
+    }
   </div>
 </div>
 
@@ -240,6 +254,8 @@
   <button mat-menu-item (click)="copySource()"><sapia-icon name="copy" /> <span class="menu-label">{{ t('action.copySource') }}</span></button>
   <button mat-menu-item (click)="share()"><sapia-icon name="share" /> <span class="menu-label">{{ t('share.action') }}</span></button>
   <button mat-menu-item (click)="openLinkDialog()"><sapia-icon name="link" /> <span class="menu-label">{{ t('share.open') }}</span></button>
+  <button mat-menu-item (click)="closeDiagram()"><sapia-icon name="close" /> <span class="menu-label">{{ t('action.closeDiagram') }}</span></button>
+  <div class="menu-divider"></div>
   <button mat-menu-item class="danger" [disabled]="!canDelete()" (click)="remove()"><sapia-icon name="trash" /> <span class="menu-label">{{ t('action.delete') }}</span></button>
 </mat-menu>
 
