@@ -3,10 +3,13 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { formatBinding } from '../core/keys';
 import { I18nService } from '../core/i18n.service';
 import { SapiaService } from '../core/sapia.service';
+import type { LegalDocId } from '../legal/legal-content';
+import { LegalService } from '../legal/legal.service';
 import { Icon } from '../ui/icon';
+import type { IconName } from '../ui/icon';
 import { LanguageBadge } from '../ui/language-badge';
 
-type Tab = 'plugins' | 'languages' | 'shortcuts' | 'config';
+type Tab = 'plugins' | 'languages' | 'shortcuts' | 'config' | 'legal';
 
 /** Read-only overview of plugins, languages, shortcuts and the configuration source. */
 @Component({
@@ -22,7 +25,11 @@ export class SettingsDialog {
   protected readonly sapia = inject(SapiaService);
   protected readonly t = this.i18n.t;
 
-  protected readonly tabs: Tab[] = ['plugins', 'languages', 'shortcuts', 'config'];
+  protected readonly tabs: Tab[] = ['plugins', 'languages', 'shortcuts', 'config', 'legal'];
+  protected readonly tabIcons: Record<Tab, IconName> = { plugins: 'plugins', languages: 'languages', shortcuts: 'key', config: 'settings', legal: 'scale' };
+  protected readonly legal = inject(LegalService);
+  protected readonly legalIcons: Record<LegalDocId, IconName> = { imprint: 'info', privacy: 'shield', terms: 'file-text' };
+  protected readonly year = new Date().getFullYear();
   protected readonly tab = signal<Tab>('plugins');
 
   protected readonly languages = computed(() => {

@@ -491,3 +491,13 @@ sapia-icon.menu-trailing {
   font-size: 9.5px;
   font-weight: 700;
 }
+
+// Legal texts fill the screen on phones.
+@media (max-width: 600px) {
+  .sapia-legal-panel {
+    --mat-dialog-container-shape: 0;
+    .mat-mdc-dialog-surface {
+      border: 0;
+    }
+  }
+}

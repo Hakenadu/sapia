@@ -69,6 +69,10 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  Scale,
+  ShieldCheck,
+  FileText,
+  Mail,
 } from 'lucide';
 import type { IconNode } from 'lucide';
 
@@ -141,6 +145,10 @@ const ICONS = {
   merge: GitMerge,
   layers: Layers,
   sync: RefreshCw,
+  scale: Scale,
+  shield: ShieldCheck,
+  'file-text': FileText,
+  mail: Mail,
 } satisfies Record<string, IconNode>;
 
 export type IconName = keyof typeof ICONS;

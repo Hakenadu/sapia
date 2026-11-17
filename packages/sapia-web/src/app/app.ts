@@ -21,6 +21,7 @@ import { SettingsDialog } from './dialogs/settings-dialog';
 import { ShareDialog } from './dialogs/share-dialog';
 import type { ShareDialogData } from './dialogs/share-dialog';
 import { CodeEditor } from './editor/code-editor';
+import { LegalService } from './legal/legal.service';
 import { LibraryPanel } from './library/library-panel';
 import { Home } from './home/home';
 import type { QuickStart } from './home/home';
@@ -72,6 +73,7 @@ export class App {
   protected readonly projects = inject(ProjectService);
   protected readonly i18n = inject(I18nService);
   protected readonly theme = inject(ThemeService);
+  protected readonly legal = inject(LegalService);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   protected readonly t = this.i18n.t;
@@ -234,6 +236,11 @@ export class App {
   }
 
   private openLinkFromLocation(): void {
+    const legalDoc = this.sapia.host ? null : LegalService.fromFragment(location.hash);
+    if (legalDoc) {
+      history.replaceState(null, '', location.href.split('#')[0]);
+      return this.legal.open(legalDoc);
+    }
     if (this.sapia.host || !sharePayloadFrom(location.hash)) return;
     const link = location.href;
     // The diagram now lives in the working copy; keep it out of the address bar and history.

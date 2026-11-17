@@ -23,7 +23,33 @@ export interface SapiaConfig {
   ai: AiConfig;
   storage: StorageConfig;
   keybindings: KeybindingConfig;
+  /**
+   * Imprint and privacy policy of a web deployment. Whoever hosts Sapia is
+   * responsible for these, so they can be replaced or left out. The terms of
+   * use belong to the software and cannot be configured. Sapia Desktop always
+   * shows the bundled texts.
+   */
+  legal: LegalConfig;
 }
+
+/** A text, either for all languages or keyed by locale (`de`, `en`, …). */
+export type LocalizedText = string | Record<string, string>;
+
+/**
+ * - `"default"` (or omitted): the texts bundled with Sapia
+ * - `false`: not shown at all
+ * - `{ "url": … }`: a link to the operator's own page
+ * - `{ "markdown": … }`: the operator's own text, inline
+ * - `{ "file": … }`: the operator's own Markdown file, relative to the deployment
+ */
+export type LegalDocumentConfig = 'default' | false | { url: string } | { markdown: LocalizedText } | { file: LocalizedText };
+
+export interface LegalConfig {
+  imprint?: LegalDocumentConfig;
+  privacy?: LegalDocumentConfig;
+}
+
+export const CONFIGURABLE_LEGAL_DOCUMENTS = ['imprint', 'privacy'] as const;
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -129,6 +155,7 @@ export const DEFAULT_CONFIG: SapiaConfig = {
   pluginOptions: {},
   ai: { enabled: false, providers: {}, maxSteps: 12 },
   storage: {},
+  legal: {},
   keybindings: {
     aiAssistant: 'Mod-k',
     save: 'Mod-s',
@@ -308,7 +335,61 @@ export function normalizeConfig(raw: unknown): NormalizedConfig {
     }
   } else if (raw['keybindings'] !== undefined) issues.push('keybindings must be an object');
 
+  if (isDict(raw['legal'])) {
+    for (const [key, value] of Object.entries(raw['legal'])) {
+      if (!(CONFIGURABLE_LEGAL_DOCUMENTS as readonly string[]).includes(key)) {
+        issues.push(key === 'terms' ? 'legal.terms cannot be configured: the terms of use belong to Sapia itself' : `legal.${key} is unknown; use "imprint" or "privacy"`);
+        continue;
+      }
+      const document = normalizeLegalDocument(value, `legal.${key}`, issues);
+      if (document !== undefined) config.legal[key as keyof LegalConfig] = document;
+    }
+  } else if (raw['legal'] !== undefined) issues.push('legal must be an object');
+
   return { config, issues };
+}
+
+function normalizeLocalizedText(raw: unknown, path: string, issues: string[]): LocalizedText | undefined {
+  if (typeof raw === 'string' && raw.trim()) return raw;
+  if (isDict(raw)) {
+    const texts: Record<string, string> = {};
+    for (const [locale, text] of Object.entries(raw)) {
+      if (typeof text === 'string' && text.trim()) texts[locale] = text;
+      else issues.push(`${path}.${locale} must be a non-empty string`);
+    }
+    if (Object.keys(texts).length) return texts;
+  }
+  issues.push(`${path} must be a non-empty string or an object of texts keyed by locale`);
+  return undefined;
+}
+
+function normalizeLegalDocument(raw: unknown, path: string, issues: string[]): LegalDocumentConfig | undefined {
+  if (raw === false || raw === 'default') return raw;
+  if (isDict(raw)) {
+    const keys = Object.keys(raw);
+    if (keys.length === 1 && keys[0] === 'url') {
+      const url = raw['url'];
+      // Absolute http(s) URLs or paths relative to the deployment; no other schemes.
+      if (typeof url === 'string' && url.trim() && (/^https?:\/\//i.test(url.trim()) || !/^[a-z][a-z0-9+.-]*:/i.test(url.trim()))) return { url: url.trim() };
+      issues.push(`${path}.url must be an http(s) URL or a path`);
+      return undefined;
+    }
+    if (keys.length === 1 && (keys[0] === 'markdown' || keys[0] === 'file')) {
+      const text = normalizeLocalizedText(raw[keys[0]], `${path}.${keys[0]}`, issues);
+      if (text === undefined) return undefined;
+      return keys[0] === 'markdown' ? { markdown: text } : { file: text };
+    }
+  }
+  issues.push(`${path} must be "default", false, or an object with exactly one of "url", "markdown" or "file"`);
+  return undefined;
+}
+
+/** Picks the text for a locale: exact match, then its language, then English, then any. */
+export function localizedText(text: LocalizedText, locale: string): string {
+  if (typeof text === 'string') return text;
+  const language = locale.toLowerCase().split(/[-_]/)[0];
+  const key = Object.keys(text).find((k) => k.toLowerCase() === locale.toLowerCase()) ?? Object.keys(text).find((k) => k.toLowerCase().split(/[-_]/)[0] === language);
+  return text[key ?? 'en'] ?? Object.values(text)[0] ?? '';
 }
 
 export type PluginReferenceKind = 'package' | 'path' | 'url';

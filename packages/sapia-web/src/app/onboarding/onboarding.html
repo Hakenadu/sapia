@@ -45,7 +45,11 @@
         </div>
       </div>
       <footer>
-        <span></span>
+        <span class="legal-links">
+          @for (entry of legal.entries(); track entry.id) {
+            <button type="button" (click)="legal.open(entry.id)">{{ t('legal.' + entry.id) }}</button>
+          }
+        </span>
         <button class="text-button primary big" (click)="step.set(1)">{{ t('action.next') }} <sapia-icon name="chevron-right" [size]="15" /></button>
       </footer>
     }
