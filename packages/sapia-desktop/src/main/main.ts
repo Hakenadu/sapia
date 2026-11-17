@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { BrowserWindow, app, ipcMain, nativeTheme, protocol, shell } from 'electron';
-import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
-import type { AiChatRequest, AiProviderConfig, DiagramDraft, HostPreferences, OnboardingResult } from '@sapia/core';
+import { BrowserWindow, app, dialog, ipcMain, nativeTheme, protocol, shell } from 'electron';
+import type { IpcMainEvent, IpcMainInvokeEvent, OpenDialogOptions } from 'electron';
+import type { AiChatRequest, AiProviderConfig, ConflictResolution, DiagramDraft, HostPreferences, OnboardingResult, ProjectDraft, ProjectRemoval } from '@sapia/core';
 import { Ipc } from '../ipc';
 import type { ToolResultMessage } from '../ipc';
 import { HostService } from './host-service';
@@ -135,10 +136,28 @@ function registerIpc(): void {
     if (preferences.theme) nativeTheme.themeSource = preferences.theme;
   });
 
-  handle(Ipc.storeList, () => host.store.list());
-  handle(Ipc.storeGet, (_e, id: string) => host.store.get(String(id)));
-  handle(Ipc.storeSave, (_e, draft: DiagramDraft) => host.store.save(draft));
-  handle(Ipc.storeDelete, (_e, id: string) => host.store.delete(String(id)));
+  // -- projects and their diagrams -----------------------------------------------
+  const projects = host.projects;
+  handle(Ipc.projectTypes, () => projects.locationTypes());
+  handle(Ipc.projectList, () => projects.listProjects());
+  handle(Ipc.projectSave, (_e, draft: ProjectDraft) => projects.saveProject(draft));
+  handle(Ipc.projectDelete, (_e, id: string, removal: ProjectRemoval) => projects.deleteProject(String(id), removal));
+  handle(Ipc.projectSync, (_e, id: string) => projects.sync(String(id)));
+  handle(Ipc.projectResolve, (_e, id: string, resolutions: Record<string, ConflictResolution>) => projects.resolveConflicts(String(id), resolutions));
+  handle(Ipc.projectPickDirectory, async (_e, initial?: string) => {
+    const options: OpenDialogOptions = { properties: ['openDirectory', 'createDirectory'], defaultPath: typeof initial === 'string' && initial ? initial : homedir() };
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+  handle(Ipc.projectReveal, async (_e, id: string) => {
+    const folder = await host.projectFolder(String(id));
+    if (folder) await shell.openPath(folder);
+  });
+  handle(Ipc.diagramList, (_e, projectId: string) => projects.listDiagrams(String(projectId)));
+  handle(Ipc.diagramGet, (_e, projectId: string, id: string) => projects.getDiagram(String(projectId), String(id)));
+  handle(Ipc.diagramSave, (_e, projectId: string, draft: DiagramDraft) => projects.saveDiagram(String(projectId), draft));
+  handle(Ipc.diagramDelete, (_e, projectId: string, id: string) => projects.deleteDiagram(String(projectId), String(id)));
+  handle(Ipc.diagramMove, (_e, id: string, from: string, to: string) => projects.moveDiagram(String(id), String(from), String(to)));
 
   // -- AI: the model runs here, its tools run in the renderer ------------------
   const pendingTools = new Map<string, { requestId: string; resolve: (output: unknown) => void; reject: (error: Error) => void }>();

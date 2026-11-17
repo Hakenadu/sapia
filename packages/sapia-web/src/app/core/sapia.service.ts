@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { KeyValueDiagramStore, MemoryStorage, createSapia, normalizeConfig, pluginFromModule, resolvePluginReference } from '@sapia/core';
-import type { DiagramStore, HostBootstrap, KeyValueStorage, PluginInfo, Sapia, SapiaConfig, SapiaHost } from '@sapia/core';
+import { MemoryStorage, createLocalStorageProjects, createSapia, normalizeConfig, pluginFromModule, resolvePluginReference } from '@sapia/core';
+import type { HostBootstrap, ProjectBackend, KeyValueStorage, PluginInfo, Sapia, SapiaConfig, SapiaHost } from '@sapia/core';
 import { mermaidPlugin } from '@sapia/plugin-mermaid';
 import { plantUmlPlugin } from '@sapia/plugin-plantuml';
 import { I18nService } from './i18n.service';
@@ -39,7 +39,8 @@ export class SapiaService {
   readonly platform = this.host ? 'desktop' : 'web';
 
   core!: Sapia;
-  store!: DiagramStore;
+  /** Projects and their diagrams: the desktop host's, or local storage in the browser. */
+  projects!: ProjectBackend;
   readonly config = signal<SapiaConfig>(normalizeConfig(undefined).config);
   readonly configIssues = signal<string[]>([]);
   readonly plugins = signal<PluginInfo[]>([]);
@@ -58,11 +59,11 @@ export class SapiaService {
       bootstrap = await this.host.getBootstrap();
       config = bootstrap.config;
       issues = bootstrap.issues;
-      this.store = this.host.store;
+      this.projects = this.host.projects;
       this.needsOnboarding.set(!bootstrap.configExists);
     } else {
       ({ config, issues } = await this.loadWebConfig());
-      this.store = new KeyValueDiagramStore(browserStorage());
+      this.projects = createLocalStorageProjects(browserStorage());
     }
     this.bootstrap.set(bootstrap);
     this.config.set(config);

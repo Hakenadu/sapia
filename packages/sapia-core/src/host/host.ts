@@ -1,6 +1,6 @@
 import type { AiBackend } from '../ai/ai';
 import type { AiProviderConfig, AiProviderTypeInfo, DiagramThemeMode, SapiaConfig, ThemePreference } from '../config/config';
-import type { DiagramStore } from '../storage/store';
+import type { ProjectBackend } from '../project/project';
 
 /** A plugin the host resolved and can serve to the UI as an ES module. */
 export interface HostPlugin {
@@ -57,7 +57,7 @@ export interface HostPreferences {
 /**
  * Bridge between the UI and a native shell. The desktop app exposes an
  * implementation as `window.sapiaHost`; in a plain browser it is absent and
- * the UI falls back to web behaviour (`/config.json`, local storage, no AI).
+ * the UI falls back to web behaviour (`/config.json`, local storage projects, no AI).
  */
 export interface SapiaHost {
   readonly platform: 'desktop';
@@ -66,7 +66,13 @@ export interface SapiaHost {
   completeOnboarding(result: OnboardingResult): Promise<HostBootstrap>;
   /** Persists UI preferences into the config file. */
   updatePreferences(preferences: HostPreferences): Promise<void>;
-  readonly store: DiagramStore;
+  /** Projects and their diagrams, kept by the host (folders, Git, `~/.sapia`). */
+  readonly projects: ProjectBackend & {
+    /** Lets the user pick a folder with the system dialog. Null when cancelled. */
+    pickDirectory(initial?: string): Promise<string | null>;
+    /** Shows a project's folder (or local clone) in the system file manager. */
+    revealProject(projectId: string): Promise<void>;
+  };
   readonly ai: AiBackend & {
     /** Checks credentials and endpoint of a provider before it is saved. */
     testProvider(provider: AiProviderConfig): Promise<ProviderTestResult>;

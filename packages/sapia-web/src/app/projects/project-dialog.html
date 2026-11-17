@@ -1,0 +1,113 @@
+<form (submit)="$event.preventDefault(); submit()">
+  <header>
+    <sapia-project-icon [type]="type()" [isDefault]="!!existing?.isDefault" [size]="40" />
+    <div>
+      <h2>{{ t(editing ? 'project.edit.title' : 'project.new.title') }}</h2>
+      <p>{{ t(editing ? 'project.edit.subtitle' : 'project.new.subtitle') }}</p>
+    </div>
+    <button type="button" class="icon-button close" (click)="ref.close()" [attr.aria-label]="t('action.close')"><sapia-icon name="close" /></button>
+  </header>
+
+  <div class="body">
+    <label class="field" [class.invalid]="touched() && !name().trim()">
+      <span class="label">{{ t('project.field.name') }}</span>
+      <input type="text" name="name" [value]="name()" (input)="name.set(read($event))" [placeholder]="t('project.field.namePlaceholder')" maxlength="80" autocomplete="off" cdkFocusInitial />
+    </label>
+
+    <label class="field">
+      <span class="label">{{ t('project.field.description') }} <small>{{ t('project.field.optional') }}</small></span>
+      <textarea name="description" rows="1" [value]="description()" (input)="description.set(read($event))" [placeholder]="t('project.field.descriptionPlaceholder')" maxlength="400"></textarea>
+    </label>
+
+    <div class="field">
+      <span class="label">{{ t('project.field.location') }}</span>
+      @if (editing) {
+        <div class="location-summary">
+          <sapia-project-icon [type]="existing!.location.type" [isDefault]="existing!.isDefault" [size]="30" />
+          <div>
+            <strong>{{ t(existing!.isDefault ? 'project.type.default' : 'project.type.' + existing!.location.type) }}</strong>
+            <span class="mono">{{ projects.locationLabel(existing!.location) }}</span>
+          </div>
+        </div>
+        <span class="hint">{{ t('project.field.locationFixed') }}</span>
+      } @else {
+        <div class="types" role="radiogroup" [attr.aria-label]="t('project.field.location')">
+          @for (option of types(); track option.type) {
+            <button
+              type="button"
+              role="radio"
+              class="type"
+              [class.selected]="type() === option.type"
+              [class.unavailable]="!option.available"
+              [attr.aria-checked]="type() === option.type"
+              [attr.aria-disabled]="!option.available"
+              (click)="choose(option.type, option.available)"
+            >
+              <sapia-project-icon [type]="option.type" [size]="34" />
+              <strong>{{ t('project.type.' + option.type) }}</strong>
+              <small>{{ t('project.type.' + option.type + '.hint') }}</small>
+              @if (!option.available) {
+                <span class="pill"><sapia-icon name="system" [size]="11" /> Sapia Desktop</span>
+              } @else if (type() === option.type) {
+                <span class="check"><sapia-icon name="check" [size]="12" [stroke]="2.6" /></span>
+              }
+            </button>
+          }
+        </div>
+
+        @switch (type()) {
+          @case ('local-storage') {
+            <p class="explain"><sapia-icon name="info" [size]="14" /> {{ t('project.localStorage.explain') }}</p>
+          }
+          @case ('directory') {
+            <div class="sub" [class.invalid]="touched() && !path().trim()">
+              <span class="label">{{ t('project.field.folder') }}</span>
+              <div class="with-button">
+                <input type="text" name="path" class="mono" [value]="path()" (input)="path.set(read($event))" [placeholder]="t('project.field.folderPlaceholder')" autocomplete="off" spellcheck="false" />
+                <button type="button" class="text-button" (click)="browse()"><sapia-icon name="open" [size]="14" /> {{ t('project.field.browse') }}</button>
+              </div>
+              <span class="hint">{{ t('project.directory.explain') }}</span>
+            </div>
+          }
+          @case ('git') {
+            <div class="sub" [class.invalid]="touched() && !url().trim()">
+              <span class="label">{{ t('project.field.repository') }}</span>
+              <input type="text" name="url" class="mono" [value]="url()" (input)="url.set(read($event))" (blur)="suggestNameFromUrl()" placeholder="git@github.com:team/architecture.git" autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="row">
+              <label class="sub">
+                <span class="label">{{ t('project.field.branch') }} <small>{{ t('project.field.optional') }}</small></span>
+                <input type="text" name="branch" class="mono" [value]="branch()" (input)="branch.set(read($event))" [placeholder]="t('project.field.branchPlaceholder')" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="sub">
+                <span class="label">{{ t('project.field.subfolder') }} <small>{{ t('project.field.optional') }}</small></span>
+                <input type="text" name="folder" class="mono" [value]="folder()" (input)="folder.set(read($event))" placeholder="docs/diagrams" autocomplete="off" spellcheck="false" />
+              </label>
+            </div>
+            <ul class="facts">
+              <li><sapia-icon name="branch" [size]="14" /> {{ t('project.git.commit') }}</li>
+              <li><sapia-icon name="merge" [size]="14" /> {{ t('project.git.conflicts') }}</li>
+              <li><sapia-icon name="key" [size]="14" /> {{ t('project.git.credentials') }}</li>
+            </ul>
+          }
+        }
+      }
+    </div>
+
+    @if (error(); as message) {
+      <div class="error" role="alert"><sapia-icon name="error" [size]="15" /> <span>{{ message }}</span></div>
+    }
+  </div>
+
+  <footer>
+    <button type="button" class="text-button ghost" (click)="ref.close()">{{ t('action.cancel') }}</button>
+    <button type="submit" class="text-button primary" [disabled]="busy() || (touched() && !valid())">
+      @if (busy()) {
+        <sapia-icon class="spin" name="loader" [size]="14" />
+        {{ t(type() === 'git' && !editing ? 'project.cloning' : 'project.saving') }}
+      } @else {
+        {{ t(editing ? 'project.edit.submit' : 'project.new.submit') }}
+      }
+    </button>
+  </footer>
+</form>

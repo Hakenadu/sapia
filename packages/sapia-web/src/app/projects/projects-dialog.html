@@ -1,0 +1,80 @@
+<header>
+  <div>
+    <h2>{{ t('projects.title') }}</h2>
+    <p>{{ t('projects.subtitle') }}</p>
+  </div>
+  <button class="text-button primary" (click)="create()"><sapia-icon name="folder-plus" [size]="15" /> {{ t('project.new') }}</button>
+  <button class="icon-button" (click)="ref.close()" [attr.aria-label]="t('action.close')"><sapia-icon name="close" /></button>
+</header>
+
+<div class="list">
+  @for (project of projects.projects(); track project.id) {
+    @let status = projects.statusOf(project);
+    <article class="project" [class.active]="project.id === projects.activeId()">
+      <button class="main" (click)="activate(project)" [attr.aria-label]="t('projects.open', { name: projects.name(project) })">
+        <sapia-project-icon [type]="project.location.type" [isDefault]="project.isDefault" [size]="42" />
+        <span class="text">
+          <span class="title">
+            <strong>{{ projects.name(project) }}</strong>
+            @if (project.isDefault) {
+              <span class="tag">{{ t('project.defaultTag') }}</span>
+            }
+            @if (project.id === projects.activeId()) {
+              <span class="tag active">{{ t('project.activeTag') }}</span>
+            }
+          </span>
+          @if (project.description) {
+            <span class="description">{{ project.description }}</span>
+          }
+          <span class="meta">
+            <span class="location" [class.mono]="project.location.type !== 'local-storage'">
+              <sapia-icon [name]="project.location.type === 'git' ? 'branch' : project.location.type === 'directory' ? 'folder' : 'database'" [size]="12" />
+              {{ projects.locationLabel(project.location) }}
+              @if (project.status.branch) {
+                <span class="branch">{{ project.status.branch }}</span>
+              }
+            </span>
+          </span>
+        </span>
+      </button>
+
+      <div class="side">
+        <span class="count">{{ t('library.count', { count: count(project) }) }}</span>
+        @if (status.tone !== 'muted') {
+          <span class="status" [attr.data-tone]="status.tone" [matTooltip]="status.detail ?? ''">
+            <sapia-icon [name]="status.icon" [size]="12" [class.spin]="status.tone === 'busy'" />
+            {{ status.label }}
+          </span>
+        }
+      </div>
+
+      <div class="actions">
+        @if (project.status.state === 'conflict') {
+          <button class="text-button danger-soft" (click)="resolve(project.id)"><sapia-icon name="merge" [size]="14" /> {{ t('conflict.resolve') }}</button>
+        }
+        @if (project.location.type === 'git') {
+          <button class="icon-button" (click)="sync(project)" [disabled]="status.tone === 'busy'" [matTooltip]="t('project.sync')" [attr.aria-label]="t('project.sync')">
+            <sapia-icon name="sync" [size]="15" [class.spin]="status.tone === 'busy'" />
+          </button>
+        }
+        @if (desktop) {
+          <button class="icon-button" (click)="reveal(project)" [matTooltip]="t('project.reveal')" [attr.aria-label]="t('project.reveal')"><sapia-icon name="open" [size]="15" /></button>
+        }
+        <button class="icon-button" (click)="edit(project)" [matTooltip]="t('project.editAction')" [attr.aria-label]="t('project.editAction')"><sapia-icon name="pencil" [size]="15" /></button>
+        @if (project.isDefault) {
+          <span class="icon-spacer"></span>
+        } @else {
+          <button class="icon-button delete" (click)="remove(project)" [matTooltip]="t('project.remove')" [attr.aria-label]="t('project.remove')"><sapia-icon name="trash" [size]="15" /></button>
+        }
+      </div>
+    </article>
+  }
+
+  <button class="add" (click)="create()">
+    <span class="plus"><sapia-icon name="plus" [size]="18" /></span>
+    <span>
+      <strong>{{ t('project.new') }}</strong>
+      <small>{{ t(desktop ? 'projects.addHint.desktop' : 'projects.addHint.web') }}</small>
+    </span>
+  </button>
+</div>

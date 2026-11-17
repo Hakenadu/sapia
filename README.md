@@ -52,7 +52,7 @@ Both languages ship with Sapia, as plugins. **Convert** turns a diagram into the
 
 ### AI assistant (desktop)
 
-Press `Ctrl/Cmd+K` and describe what you want. The assistant creates, edits, checks and converts diagrams through the same tools you use, and you see every step. It works with OpenAI and any OpenAI-compatible server (Ollama, LM Studio, vLLM, …); the API key stays in the desktop app's main process.
+Press `Ctrl/Cmd+K` and describe what you want. The assistant drafts, edits, checks and converts diagrams through the same tools you use, and you see every step. It never saves: you decide what to keep. It works with OpenAI and any OpenAI-compatible server (Ollama, LM Studio, vLLM, …); the API key stays in the desktop app's main process.
 
 ![The AI assistant creating a class diagram](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/ai-assistant.png)
 
@@ -61,6 +61,18 @@ Press `Ctrl/Cmd+K` and describe what you want. The assistant creates, edits, che
 **Share** packs the whole diagram, compressed, into a link or a short code. Nothing is uploaded: whoever opens the link gets the diagram straight from the URL.
 
 ![The share dialog with link and code](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/share.png)
+
+### Projects: browser, folder or Git repository
+
+Every diagram belongs to a project. A project has a name, an optional description and a storage location:
+
+- **Browser storage**: the only kind in the web app; diagrams stay in the browser.
+- **Folder** (desktop): plain `.puml` / `.mmd` files named after the diagram, in any folder on your computer. Files you add yourself show up too.
+- **Git repository** (desktop): every save is committed and pushed right away. Offline, commits wait and are pushed later. When someone else changed the same diagram, Sapia shows both versions and you decide: keep yours, take theirs, or keep both.
+
+There is always a default project: in the web app it uses the browser storage, in the desktop app `~/.sapia/diagrams` as before. Switch projects at the top of the library, move diagrams with the folder icon next to them or with the project name in front of the diagram title. The AI assistant sees the projects too, but it never saves: what it drafts stays unsaved until you save it.
+
+![Projects on the start page](https://raw.githubusercontent.com/Hakenadu/sapia/main/docs/media/projects.png)
 
 ### Plugins for more languages
 
@@ -110,7 +122,7 @@ npm install -g @sapia/desktop
 sapia
 ```
 
-On first start, Sapia asks for language and theme, optionally connects an AI provider (with a connection test) and writes `~/.sapia/config.json`. Diagrams are stored as files in `~/.sapia/diagrams`. Set `SAPIA_HOME` to use another directory.
+On first start, Sapia asks for language and theme, optionally connects an AI provider (with a connection test) and writes `~/.sapia/config.json`. The default project keeps its diagrams as files in `~/.sapia/diagrams`; other projects are listed in `~/.sapia/projects.json`, and Git projects are cloned to `~/.sapia/projects/<id>/repository`. Git projects use your own Git setup (SSH keys, credential helpers). Set `SAPIA_HOME` to use another directory.
 
 On the very first start, `sapia` downloads the Electron runtime (about 110 MB) into `~/.sapia/electron`; later starts use it directly. No install scripts are involved, so this also works with `--ignore-scripts` and with a global installation owned by root.
 
@@ -190,7 +202,7 @@ Plugins can add provider types, see below.
 
 ## Sapia Web
 
-`npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`; the same build is published as [`@sapia/web`](https://www.npmjs.com/package/@sapia/web). It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
+`npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`; the same build is published as [`@sapia/web`](https://www.npmjs.com/package/@sapia/web). It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage, in one or more projects. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
 
 ## Writing a plugin
 

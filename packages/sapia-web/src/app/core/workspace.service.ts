@@ -1,7 +1,8 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
-import { ConversionError, LineIndex, UNKNOWN_DIAGRAM_TYPE } from '@sapia/core';
+import { ConversionError, DEFAULT_PROJECT_ID, LineIndex, UNKNOWN_DIAGRAM_TYPE } from '@sapia/core';
 import type {
   AiDiagnostic,
+  AiProjectSummary,
   AiWorkspace,
   Detection,
   Diagnostic,
@@ -13,6 +14,7 @@ import type {
   TextRange,
 } from '@sapia/core';
 import { I18nService } from './i18n.service';
+import { ProjectService } from './project.service';
 import { SapiaService } from './sapia.service';
 import { ThemeService } from './theme.service';
 
@@ -39,11 +41,15 @@ export class WorkspaceService {
   private readonly sapia = inject(SapiaService);
   private readonly i18n = inject(I18nService);
   private readonly theme = inject(ThemeService);
+  private readonly projects = inject(ProjectService);
 
   // -- document ------------------------------------------------------------
   /** False while no diagram is open: the app shows its start page instead of the editor. */
   readonly isOpen = signal(false);
   readonly id = signal<string | null>(null);
+  /** Project of the open diagram; for an unsaved diagram the one it will be saved to. */
+  readonly projectId = signal<string>(DEFAULT_PROJECT_ID);
+  readonly project = computed(() => this.projects.byId(this.projectId()) ?? null);
   readonly name = signal('');
   readonly source = signal('');
   private readonly savedSource = signal<string | null>(null);
@@ -83,7 +89,8 @@ export class WorkspaceService {
   readonly previewStale = computed(() => this.previewState() === 'error' && this.svg() !== null);
 
   // -- library -------------------------------------------------------------
-  readonly library = signal<StoredDiagramMeta[]>([]);
+  /** Saved diagrams of the active project. */
+  readonly library = computed<StoredDiagramMeta[]>(() => this.projects.diagrams()[this.projects.activeId()] ?? []);
 
   /** Request for the editor to select and reveal a range. */
   readonly reveal = signal<{ range: TextRange; nonce: number } | null>(null);
@@ -116,7 +123,7 @@ export class WorkspaceService {
         }
         return;
       }
-      const session = { id: this.id(), name: this.name(), source: this.source(), savedSource: this.savedSource(), savedName: this.savedName() };
+      const session = { id: this.id(), projectId: this.projectId(), name: this.name(), source: this.source(), savedSource: this.savedSource(), savedName: this.savedName() };
       try {
         localStorage.setItem(SESSION_KEY, JSON.stringify(session));
       } catch {
@@ -127,13 +134,15 @@ export class WorkspaceService {
 
   /** Restores the last session; without one the start page is shown. */
   async start(): Promise<void> {
-    await this.refreshLibrary();
+    await this.projects.start();
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
-        const session = JSON.parse(raw) as { id: string | null; name: string; source: string; savedSource: string | null; savedName: string | null };
+        const session = JSON.parse(raw) as { id: string | null; projectId?: string; name: string; source: string; savedSource: string | null; savedName: string | null };
         if (typeof session.source === 'string' && session.source.trim()) {
-          const stillExists = session.id ? this.library().some((d) => d.id === session.id) : true;
+          const projectId = session.projectId && this.projects.byId(session.projectId) ? session.projectId : DEFAULT_PROJECT_ID;
+          const stillExists = session.id ? (this.projects.diagrams()[projectId] ?? []).some((d) => d.id === session.id) : true;
+          this.projectId.set(projectId);
           this.id.set(stillExists ? session.id : null);
           this.name.set(session.name || this.i18n.t('doc.untitled'));
           this.source.set(session.source);
@@ -207,9 +216,10 @@ export class WorkspaceService {
     this.cursor.set({ line: 0, column: 0 });
   }
 
-  private open(id: string | null, name: string, source: string, saved: { source: string; name: string } | null): void {
+  private open(id: string | null, name: string, source: string, saved: { source: string; name: string } | null, projectId = this.projects.activeId()): void {
     this.isOpen.set(true);
     this.id.set(id);
+    this.projectId.set(projectId);
     this.name.set(name);
     this.source.set(source);
     // A fresh template or blank document is pristine until the user edits it.
@@ -218,16 +228,18 @@ export class WorkspaceService {
     this.cursor.set({ line: 0, column: 0 });
   }
 
-  async openDiagram(id: string): Promise<boolean> {
-    const diagram = await this.sapia.store.get(id);
+  async openDiagram(id: string, projectId = this.projects.activeId()): Promise<boolean> {
+    const diagram = await this.sapia.projects.getDiagram(projectId, id);
     if (!diagram) return false;
-    this.open(diagram.id, diagram.name, diagram.source, { source: diagram.source, name: diagram.name });
+    this.open(diagram.id, diagram.name, diagram.source, { source: diagram.source, name: diagram.name }, projectId);
     return true;
   }
 
+  /** Saves the open diagram into its project. Only the user triggers this, never the assistant. */
   async save(): Promise<void> {
     const detection = this.detection();
-    const saved = await this.sapia.store.save({
+    const projectId = this.projectId();
+    const { diagram: saved, status } = await this.sapia.projects.saveDiagram(projectId, {
       id: this.id() ?? undefined,
       name: this.name() || this.i18n.t('doc.untitled'),
       source: this.source(),
@@ -238,7 +250,50 @@ export class WorkspaceService {
     this.name.set(saved.name);
     this.savedSource.set(saved.source);
     this.savedName.set(saved.name);
-    await this.refreshLibrary();
+    this.projects.setStatus(projectId, status);
+    await this.projects.refreshProject(projectId);
+  }
+
+  /**
+   * Moves the open diagram to another project. A saved diagram is moved right
+   * away; an unsaved one will simply be saved there.
+   */
+  async moveTo(projectId: string): Promise<void> {
+    const id = this.id();
+    if (projectId === this.projectId()) return;
+    if (!id) return void this.projectId.set(projectId);
+    // Unsaved edits stay in the editor: the move takes the stored version.
+    await this.moveDiagram(id, this.projectId(), projectId);
+  }
+
+  /** Moves a saved diagram between projects and follows it in the editor when it is open. */
+  async moveDiagram(id: string, from: string, to: string): Promise<StoredDiagramMeta | null> {
+    if (from === to) return null;
+    const { diagram, status } = await this.sapia.projects.moveDiagram(id, from, to);
+    if (this.id() === id && this.projectId() === from) {
+      this.id.set(diagram.id);
+      this.projectId.set(to);
+      this.savedName.set(diagram.name);
+    }
+    this.projects.setStatus(to, status);
+    await Promise.all([this.projects.refreshProject(from), this.projects.refreshProject(to)]);
+    return diagram;
+  }
+
+  /** Reloads the open diagram after its project was synchronised, unless it has unsaved edits. */
+  async reloadFromProject(projectId: string): Promise<void> {
+    const id = this.id();
+    if (!id || this.projectId() !== projectId || this.dirty()) return;
+    const diagram = await this.sapia.projects.getDiagram(projectId, id);
+    if (!diagram) {
+      // Removed remotely: keep it open as unsaved work.
+      this.id.set(null);
+      this.savedSource.set(null);
+      this.savedName.set(null);
+      return;
+    }
+    if (diagram.source === this.source() && diagram.name === this.name()) return;
+    this.open(diagram.id, diagram.name, diagram.source, { source: diagram.source, name: diagram.name }, projectId);
   }
 
   async duplicate(): Promise<void> {
@@ -249,19 +304,16 @@ export class WorkspaceService {
     await this.save();
   }
 
-  async deleteDiagram(id: string): Promise<void> {
-    await this.sapia.store.delete(id);
+  async deleteDiagram(id: string, projectId: string): Promise<void> {
+    const status = await this.sapia.projects.deleteDiagram(projectId, id);
+    this.projects.setStatus(projectId, status);
     // Deleting the open diagram closes it: back to the start page.
-    if (this.id() === id) this.close();
-    await this.refreshLibrary();
+    if (this.id() === id && this.projectId() === projectId) this.close();
+    await this.projects.refreshProject(projectId);
   }
 
   async refreshLibrary(): Promise<void> {
-    try {
-      this.library.set(await this.sapia.store.list());
-    } catch {
-      this.library.set([]);
-    }
+    await this.projects.refreshProject(this.projects.activeId());
   }
 
   // -- conversion ----------------------------------------------------------
@@ -367,9 +419,12 @@ export class WorkspaceService {
       diagnostics = this.toAiDiagnostics(source, result.diagnostics);
       if (result.failure) diagnostics.push({ line: 1, severity: 'error', message: result.failure });
     }
+    const project = this.project();
     return {
       id: this.id(),
       name: this.name(),
+      project: { id: this.projectId(), name: this.projects.name(project) },
+      saved: this.isSaved(),
       source,
       languageId: detection?.languageId ?? null,
       diagramType: detection?.diagramType ?? null,
@@ -386,22 +441,35 @@ export class WorkspaceService {
       this.source.set(source);
       return this.snapshot();
     },
-    listDiagrams: async () => {
-      await this.refreshLibrary();
-      return this.library();
+    listProjects: async () => this.aiProjects(),
+    setActiveProject: async (projectId) => {
+      if (!this.projects.byId(projectId)) return false;
+      this.projects.setActive(projectId);
+      return true;
     },
-    readDiagram: async (id) => {
-      const d = await this.sapia.store.get(id);
+    listDiagrams: async (projectId) => {
+      const id = this.aiProjectId(projectId);
+      await this.projects.refreshProject(id);
+      return this.projects.diagrams()[id] ?? [];
+    },
+    readDiagram: async (id, projectId) => {
+      const d = await this.sapia.projects.getDiagram(this.aiProjectId(projectId), id);
       return d ? { name: d.name, source: d.source } : null;
     },
-    createDiagram: async ({ name, source }) => {
-      this.open(null, name.trim() || this.i18n.t('doc.untitled'), source, null);
-      await this.save();
+    createDiagram: async ({ name, source, projectId }) => {
+      // The assistant never saves: the new diagram stays unsaved until the user saves it.
+      this.open(null, name.trim() || this.i18n.t('doc.untitled'), source, null, this.aiProjectId(projectId));
+      this.savedSource.set(null);
       return this.snapshot();
     },
-    openDiagram: async (id) => ((await this.openDiagram(id)) ? this.snapshot() : null),
+    openDiagram: async (id, projectId) => ((await this.openDiagram(id, this.aiProjectId(projectId))) ? this.snapshot() : null),
     renameActiveDiagram: async (name) => this.rename(name),
-    saveActiveDiagram: () => this.save(),
+    setActiveDiagramProject: async (projectId) => {
+      const target = this.aiProjectId(projectId);
+      if (this.id()) throw new Error('The open diagram is already saved. Moving saved diagrams is up to the user (project menu next to the title).');
+      this.projectId.set(target);
+      return this.snapshot();
+    },
     convertActiveDiagram: async (target) => {
       const { warnings } = this.convert(target);
       return { snapshot: await this.snapshot(), warnings };
@@ -418,6 +486,27 @@ export class WorkspaceService {
     getTemplate: async (languageId, diagramType) =>
       this.sapia.core.languages.get(languageId)?.diagramTypes.find((t) => t.id === diagramType)?.template ?? null,
   };
+
+  private aiProjectId(projectId: string | undefined): string {
+    if (!projectId) return this.projects.activeId();
+    if (!this.projects.byId(projectId)) throw new Error(`No project with id ${projectId}. Call list_projects for the ids.`);
+    return projectId;
+  }
+
+  /** Projects as the assistant sees them. */
+  aiProjects(): AiProjectSummary[] {
+    return this.projects.projects().map((p) => ({
+      id: p.id,
+      name: this.projects.name(p),
+      ...(p.description ? { description: p.description } : {}),
+      storage: p.location.type,
+      ...(p.location.type !== 'local-storage' ? { location: this.projects.locationLabel(p.location) } : {}),
+      isDefault: p.isDefault,
+      active: p.id === this.projects.activeId(),
+      diagramCount: this.projects.diagrams()[p.id]?.length ?? 0,
+      syncState: p.status.state,
+    }));
+  }
 
   capabilities(): LanguageCapability[] {
     const { languages, conversion } = this.sapia.core;

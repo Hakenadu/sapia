@@ -48,7 +48,18 @@
     <div class="library-backdrop" (click)="libraryOpen.set(false)"></div>
   }
   @if (libraryOpen()) {
-    <sapia-library-panel class="library" [class.overlay]="overlayLibrary()" (opened)="open($event)" (deleted)="remove($event)" (created)="newDiagram()" (closed)="libraryOpen.set(false)" />
+    <sapia-library-panel
+      class="library"
+      [class.overlay]="overlayLibrary()"
+      (opened)="open($event)"
+      (deleted)="remove($event)"
+      (moved)="moveDiagram($event.diagram, $event.to)"
+      (created)="newDiagram()"
+      (createProject)="createProject()"
+      (manageProjects)="manageProjects()"
+      (conflictRequested)="resolveConflicts($event)"
+      (closed)="libraryOpen.set(false)"
+    />
   }
 
   <div class="main">
@@ -59,6 +70,9 @@
         (templateChosen)="startFrom($event)"
         (libraryRequested)="libraryOpen.set(true)"
         (opened)="open($event)"
+        (projectChosen)="showProject($event)"
+        (createProject)="createProject()"
+        (manageProjects)="manageProjects()"
         (aiRequested)="toggleAi()"
         (pasteRequested)="pasteFromClipboard()"
         (fileDropped)="openFile($event)"
@@ -68,6 +82,13 @@
     <!-- Top bar ------------------------------------------------------------->
     <header class="topbar">
       <div class="doc">
+        @if (ws.project(); as project) {
+          <button class="project-crumb" [matMenuTriggerFor]="docProjectMenu" [matTooltip]="t(ws.id() ? 'project.crumb.saved' : 'project.crumb.unsaved', { project: projects.name(project) })">
+            <sapia-project-icon [type]="project.location.type" [isDefault]="project.isDefault" [size]="20" />
+            <span class="crumb-name">{{ projects.name(project) }}</span>
+          </button>
+          <sapia-icon class="crumb-sep" name="chevron-right" [size]="14" />
+        }
         <input
           #title
           class="title"
@@ -257,6 +278,25 @@
   <button mat-menu-item (click)="closeDiagram()"><sapia-icon name="close" /> <span class="menu-label">{{ t('action.closeDiagram') }}</span></button>
   <div class="menu-divider"></div>
   <button mat-menu-item class="danger" [disabled]="!canDelete()" (click)="remove()"><sapia-icon name="trash" /> <span class="menu-label">{{ t('action.delete') }}</span></button>
+</mat-menu>
+
+<mat-menu #docProjectMenu="matMenu" class="project-menu">
+  <div class="menu-caption">{{ t(ws.id() ? 'project.menu.move' : 'project.menu.saveTo') }}</div>
+  @for (project of projects.projects(); track project.id) {
+    <button mat-menu-item class="menu-rich" (click)="moveOpenDiagram(project.id)">
+      <sapia-project-icon [type]="project.location.type" [isDefault]="project.isDefault" [size]="26" />
+      <span class="menu-label">
+        {{ projects.name(project) }}
+        <small>{{ projects.locationLabel(project.location) }}</small>
+      </span>
+      @if (project.id === ws.projectId()) {
+        <sapia-icon class="menu-trailing" name="check" [size]="14" />
+      }
+    </button>
+  }
+  <div class="menu-divider"></div>
+  <button mat-menu-item (click)="createProject(true)"><sapia-icon name="folder-plus" /> <span class="menu-label">{{ t('project.new') }}</span></button>
+  <button mat-menu-item (click)="manageProjects()"><sapia-icon name="settings" /> <span class="menu-label">{{ t('project.manage') }}</span></button>
 </mat-menu>
 
 <mat-menu #themeMenu="matMenu">

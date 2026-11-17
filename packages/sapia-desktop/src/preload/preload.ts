@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AiChatHandlers, AiChatRequest, AiProviderConfig, DiagramDraft, HostPreferences, OnboardingResult, SapiaHost } from '@sapia/core';
+import type { AiChatHandlers, AiChatRequest, AiProviderConfig, ConflictResolution, DiagramDraft, HostPreferences, OnboardingResult, ProjectDraft, ProjectRemoval, SapiaHost } from '@sapia/core';
 import { Ipc } from '../ipc';
 import type { ToolResultMessage } from '../ipc';
 
@@ -26,11 +26,20 @@ const host: SapiaHost = {
   getBootstrap: () => ipcRenderer.invoke(Ipc.bootstrap),
   completeOnboarding: (result: OnboardingResult) => ipcRenderer.invoke(Ipc.completeOnboarding, result),
   updatePreferences: (preferences: HostPreferences) => ipcRenderer.invoke(Ipc.updatePreferences, preferences),
-  store: {
-    list: () => ipcRenderer.invoke(Ipc.storeList),
-    get: (id: string) => ipcRenderer.invoke(Ipc.storeGet, id),
-    save: (draft: DiagramDraft) => ipcRenderer.invoke(Ipc.storeSave, draft),
-    delete: (id: string) => ipcRenderer.invoke(Ipc.storeDelete, id),
+  projects: {
+    locationTypes: () => ipcRenderer.invoke(Ipc.projectTypes),
+    listProjects: () => ipcRenderer.invoke(Ipc.projectList),
+    saveProject: (draft: ProjectDraft) => ipcRenderer.invoke(Ipc.projectSave, draft),
+    deleteProject: (id: string, removal: ProjectRemoval) => ipcRenderer.invoke(Ipc.projectDelete, id, removal),
+    sync: (projectId: string) => ipcRenderer.invoke(Ipc.projectSync, projectId),
+    resolveConflicts: (projectId: string, resolutions: Record<string, ConflictResolution>) => ipcRenderer.invoke(Ipc.projectResolve, projectId, resolutions),
+    pickDirectory: (initial?: string) => ipcRenderer.invoke(Ipc.projectPickDirectory, initial),
+    revealProject: (projectId: string) => ipcRenderer.invoke(Ipc.projectReveal, projectId),
+    listDiagrams: (projectId: string) => ipcRenderer.invoke(Ipc.diagramList, projectId),
+    getDiagram: (projectId: string, id: string) => ipcRenderer.invoke(Ipc.diagramGet, projectId, id),
+    saveDiagram: (projectId: string, draft: DiagramDraft) => ipcRenderer.invoke(Ipc.diagramSave, projectId, draft),
+    deleteDiagram: (projectId: string, id: string) => ipcRenderer.invoke(Ipc.diagramDelete, projectId, id),
+    moveDiagram: (id: string, from: string, to: string) => ipcRenderer.invoke(Ipc.diagramMove, id, from, to),
   },
   ai: {
     // An AbortSignal cannot cross the bridge; the UI calls abort() instead.

@@ -7,6 +7,7 @@ export * from './conversion/conversion';
 export * from './i18n/i18n';
 export * from './i18n/messages';
 export * from './storage/store';
+export * from './project/project';
 export * from './config/config';
 export * from './ai/ai';
 export * from './plugin/plugin';
