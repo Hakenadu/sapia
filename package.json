@@ -1,6 +1,6 @@
 {
   "name": "sapia",
-  "version": "0.1.4-snapshot.0",
+  "version": "0.1.5-snapshot.0",
   "private": true,
   "description": "Sapia – a modern editor for text-based diagrams (PlantUML, Mermaid, and more via plugins).",
   "license": "MIT",
