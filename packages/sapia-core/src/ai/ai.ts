@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../language/language';
+import type { ProjectLocationType, ProjectSyncState } from '../project/project';
 import type { StoredDiagramMeta } from '../storage/store';
 
 /** JSON Schema (draft-07 subset) describing a tool's input. */
@@ -16,6 +17,10 @@ export type JsonSchema = {
 export interface DiagramSnapshot {
   id: string | null;
   name: string;
+  /** Project the diagram belongs to, or will be saved to once the user saves it. */
+  project: { id: string; name: string };
+  /** False while the editor holds changes (or a new diagram) the user has not saved yet. */
+  saved: boolean;
   source: string;
   languageId: string | null;
   diagramType: string | null;
@@ -28,6 +33,20 @@ export interface AiDiagnostic {
   line: number;
   severity: Diagnostic['severity'];
   message: string;
+}
+
+export interface AiProjectSummary {
+  id: string;
+  name: string;
+  description?: string;
+  storage: ProjectLocationType;
+  /** Where the diagrams live, e.g. a folder or a repository URL. */
+  location?: string;
+  isDefault: boolean;
+  /** The project shown in the library; new diagrams go here. */
+  active: boolean;
+  diagramCount: number;
+  syncState: ProjectSyncState;
 }
 
 export interface LanguageCapability {
@@ -46,13 +65,25 @@ export interface AiWorkspace {
   getActiveDiagram(): Promise<DiagramSnapshot>;
   /** Replaces the source of the open diagram and returns the validated result. */
   setActiveSource(source: string): Promise<DiagramSnapshot>;
-  listDiagrams(): Promise<StoredDiagramMeta[]>;
-  readDiagram(id: string): Promise<{ name: string; source: string } | null>;
-  /** Creates a diagram, opens it in the editor and returns the validated result. */
-  createDiagram(input: { name: string; source: string }): Promise<DiagramSnapshot>;
-  openDiagram(id: string): Promise<DiagramSnapshot | null>;
+  listProjects(): Promise<AiProjectSummary[]>;
+  /** Shows a project in the library; new diagrams are saved there. Returns false for unknown ids. */
+  setActiveProject(projectId: string): Promise<boolean>;
+  /** Saved diagrams of a project (the active project when omitted). */
+  listDiagrams(projectId?: string): Promise<StoredDiagramMeta[]>;
+  readDiagram(id: string, projectId?: string): Promise<{ name: string; source: string } | null>;
+  /**
+   * Opens a new, unsaved diagram in the editor and returns the validated
+   * result. Only the user saves it.
+   */
+  createDiagram(input: { name: string; source: string; projectId?: string }): Promise<DiagramSnapshot>;
+  openDiagram(id: string, projectId?: string): Promise<DiagramSnapshot | null>;
+  /** Renames the diagram in the editor; the new name is stored when the user saves. */
   renameActiveDiagram(name: string): Promise<void>;
-  saveActiveDiagram(): Promise<void>;
+  /**
+   * Chooses the project an unsaved diagram will be saved to. Throws for
+   * diagrams that are already saved: moving those is up to the user.
+   */
+  setActiveDiagramProject(projectId: string): Promise<DiagramSnapshot>;
   convertActiveDiagram(targetLanguageId: string): Promise<{ snapshot: DiagramSnapshot; warnings: string[] }>;
   /** Detects and validates a source without touching the editor. */
   checkSource(source: string): Promise<Pick<DiagramSnapshot, 'languageId' | 'diagramType' | 'diagnostics'>>;
@@ -122,6 +153,11 @@ export interface AiBackend {
   reset(sessionId: string): Promise<void>;
 }
 
+const projectId: JsonSchema = {
+  type: 'string',
+  description: 'Project id from list_projects. Defaults to the active project.',
+};
+
 const object = (properties: Record<string, JsonSchema>, required: string[] = []): JsonSchema => ({
   type: 'object',
   properties,
@@ -133,6 +169,8 @@ function summarize(snapshot: DiagramSnapshot, includeSource = false) {
   return {
     id: snapshot.id,
     name: snapshot.name,
+    project: snapshot.project,
+    saved: snapshot.saved,
     language: snapshot.languageId,
     diagramType: snapshot.diagramType,
     diagnostics: snapshot.diagnostics,
@@ -220,23 +258,47 @@ export function createCoreAiTools(): AiTool[] {
     {
       name: 'create_diagram',
       description:
-        'Creates a new diagram with the given name and source, saves it to the library and opens it in the editor. Returns diagnostics for the source.',
+        'Opens a new diagram with the given name and source in the editor, replacing what is open there. It is NOT saved: the user reviews and saves it. Returns diagnostics for the source.',
       mutating: true,
       inputSchema: object(
         {
           name: { type: 'string', description: 'Short, human readable name.' },
           source: { type: 'string', description: 'Complete diagram source.' },
+          projectId: { ...projectId, description: 'Project the user will save it to. Defaults to the active project.' },
         },
         ['name', 'source'],
       ),
-      execute: async (input: { name: string; source: string }, { workspace }) => summarize(await workspace.createDiagram(input)),
+      execute: async (input: { name: string; source: string; projectId?: string }, { workspace }) => summarize(await workspace.createDiagram(input)),
+    },
+    {
+      name: 'list_projects',
+      description:
+        'Lists the projects. Every diagram belongs to exactly one project; a project stores its diagrams in the browser, in a folder or in a Git repository. Returns id, name, description, storage type, whether it is the active (library) project and the number of diagrams.',
+      inputSchema: object({}),
+      execute: async (_input, { workspace }) => workspace.listProjects(),
+    },
+    {
+      name: 'switch_project',
+      description: 'Makes a project the active one: the library shows its diagrams and new diagrams are saved there. Does not change the open diagram.',
+      inputSchema: object({ projectId: { type: 'string' } }, ['projectId']),
+      execute: async (input: { projectId: string }, { workspace }) => {
+        if (!(await workspace.setActiveProject(input.projectId))) throw new Error(`No project with id ${input.projectId}`);
+        return { ok: true };
+      },
+    },
+    {
+      name: 'set_diagram_project',
+      description:
+        'Chooses the project the open, unsaved diagram will be saved to when the user saves it. Fails for diagrams that are already saved; the user moves those through the project menu.',
+      inputSchema: object({ projectId: { type: 'string' } }, ['projectId']),
+      execute: async (input: { projectId: string }, { workspace }) => summarize(await workspace.setActiveDiagramProject(input.projectId)),
     },
     {
       name: 'list_diagrams',
-      description: 'Lists the diagrams saved in the library (id, name, language, diagram type, last update).',
-      inputSchema: object({}),
-      execute: async (_input, { workspace }) =>
-        (await workspace.listDiagrams()).map((d) => ({
+      description: 'Lists the saved diagrams of a project (id, name, language, diagram type, last update).',
+      inputSchema: object({ projectId }),
+      execute: async (input: { projectId?: string }, { workspace }) =>
+        (await workspace.listDiagrams(input.projectId)).map((d) => ({
           id: d.id,
           name: d.name,
           language: d.languageId ?? null,
@@ -247,9 +309,9 @@ export function createCoreAiTools(): AiTool[] {
     {
       name: 'read_diagram',
       description: 'Reads the source of a saved diagram without opening it.',
-      inputSchema: object({ id: { type: 'string' } }, ['id']),
-      execute: async (input: { id: string }, { workspace }) => {
-        const diagram = await workspace.readDiagram(input.id);
+      inputSchema: object({ id: { type: 'string' }, projectId }, ['id']),
+      execute: async (input: { id: string; projectId?: string }, { workspace }) => {
+        const diagram = await workspace.readDiagram(input.id, input.projectId);
         if (!diagram) throw new Error(`No diagram with id ${input.id}`);
         return diagram;
       },
@@ -258,30 +320,20 @@ export function createCoreAiTools(): AiTool[] {
       name: 'open_diagram',
       description: 'Opens a saved diagram in the editor.',
       mutating: true,
-      inputSchema: object({ id: { type: 'string' } }, ['id']),
-      execute: async (input: { id: string }, { workspace }) => {
-        const snapshot = await workspace.openDiagram(input.id);
+      inputSchema: object({ id: { type: 'string' }, projectId }, ['id']),
+      execute: async (input: { id: string; projectId?: string }, { workspace }) => {
+        const snapshot = await workspace.openDiagram(input.id, input.projectId);
         if (!snapshot) throw new Error(`No diagram with id ${input.id}`);
         return summarize(snapshot, true);
       },
     },
     {
       name: 'rename_diagram',
-      description: 'Renames the diagram open in the editor.',
+      description: 'Renames the diagram open in the editor. Like every change, it is stored when the user saves.',
       mutating: true,
       inputSchema: object({ name: { type: 'string' } }, ['name']),
       execute: async (input: { name: string }, { workspace }) => {
         await workspace.renameActiveDiagram(input.name);
-        return { ok: true };
-      },
-    },
-    {
-      name: 'save_diagram',
-      description: 'Saves the diagram open in the editor to the library.',
-      mutating: true,
-      inputSchema: object({}),
-      execute: async (_input, { workspace }) => {
-        await workspace.saveActiveDiagram();
         return { ok: true };
       },
     },
@@ -370,7 +422,14 @@ export interface SystemPromptInput {
   /** Locale of the UI; the assistant answers in it unless the user writes in another language. */
   locale: string;
   capabilities: LanguageCapability[];
+  projects?: AiProjectSummary[];
 }
+
+const STORAGE_LABEL: Record<ProjectLocationType, string> = {
+  'local-storage': 'browser storage',
+  directory: 'folder',
+  git: 'Git repository',
+};
 
 export function buildAiSystemPrompt(input: SystemPromptInput): string {
   const languages = input.capabilities
@@ -383,9 +442,19 @@ export function buildAiSystemPrompt(input: SystemPromptInput): string {
     'Installed diagram languages:',
     languages || '- (none)',
     '',
+    'Projects: every diagram belongs to one project, which stores its diagrams in the browser, in a folder or in a Git repository (each save is a commit).',
+    ...(input.projects?.length
+      ? input.projects.map(
+          (p) =>
+            `- ${p.name} (id: ${p.id}; ${STORAGE_LABEL[p.storage]}${p.location ? ` ${p.location}` : ''}; ${p.diagramCount} diagrams${p.active ? '; active' : ''}${p.isDefault ? '; default' : ''})${p.description ? `: ${p.description}` : ''}`,
+        )
+      : ['- (only the default project)']),
+    '',
     'Guidelines:',
     '- Inspect the open diagram with get_active_diagram before changing it, unless the user asks for a brand-new diagram.',
     '- Make changes through the tools; do not just print diagram source for the user to paste.',
+    '- You cannot save. Your changes and new diagrams stay unsaved in the editor until the user saves them; say so when you created or changed something. Never claim a diagram was saved.',
+    '- New diagrams go to the active project. If the user names another project, pass its id to create_diagram or use set_diagram_project.',
     '- Keep the language the diagram is written in unless asked to convert. Use convert_diagram for conversions when a target is available.',
     '- For small changes prefer edit_diagram or add_to_diagram; use replace_diagram_source for rewrites.',
     '- Every modifying tool returns diagnostics. If it reports errors, fix them before answering.',

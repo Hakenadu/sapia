@@ -1,15 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConversionError, DESKTOP_SHARE_BASE, LineIndex, ShareError, createShareCode, createShareLink, decodeSharedDiagram, sharePayloadFrom } from '@sapia/core';
-import type { DiagramThemeMode, Diagnostic, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
+import type { DiagramThemeMode, Diagnostic, ProjectInfo, RenderedElement, StoredDiagramMeta, TextRange, ThemePreference } from '@sapia/core';
 import { firstValueFrom } from 'rxjs';
 import { AiWidget } from './ai/ai-widget';
 import { I18nService } from './core/i18n.service';
 import { formatBinding, matchesBinding } from './core/keys';
 import { SapiaService } from './core/sapia.service';
+import { ProjectService } from './core/project.service';
 import { ThemeService } from './core/theme.service';
 import { WorkspaceService } from './core/workspace.service';
 import { ConfirmDialog } from './dialogs/confirm-dialog';
@@ -25,6 +26,12 @@ import { Home } from './home/home';
 import type { QuickStart } from './home/home';
 import { Onboarding } from './onboarding/onboarding';
 import { Preview } from './preview/preview';
+import { ConflictDialog } from './projects/conflict-dialog';
+import type { ConflictDialogData } from './projects/conflict-dialog';
+import { ProjectDialog } from './projects/project-dialog';
+import type { ProjectDialogData } from './projects/project-dialog';
+import { ProjectsDialog } from './projects/projects-dialog';
+import { ProjectIcon } from './ui/project-icon';
 import { Icon } from './ui/icon';
 import type { IconName } from './ui/icon';
 import { LanguageBadge } from './ui/language-badge';
@@ -47,7 +54,7 @@ interface Problem {
 /** The application shell: toolbar, editor / preview split, library, status bar. */
 @Component({
   selector: 'sapia-root',
-  imports: [AiWidget, CodeEditor, Home, Icon, LanguageBadge, LibraryPanel, Logo, MatMenuModule, MatTooltipModule, Onboarding, Preview],
+  imports: [AiWidget, CodeEditor, Home, Icon, LanguageBadge, LibraryPanel, Logo, MatMenuModule, MatTooltipModule, Onboarding, Preview, ProjectIcon],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,6 +69,7 @@ interface Problem {
 export class App {
   protected readonly sapia = inject(SapiaService);
   protected readonly ws = inject(WorkspaceService);
+  protected readonly projects = inject(ProjectService);
   protected readonly i18n = inject(I18nService);
   protected readonly theme = inject(ThemeService);
   private readonly dialog = inject(MatDialog);
@@ -142,6 +150,71 @@ export class App {
     setTimeout(() => this.openLinkFromLocation());
     window.addEventListener('hashchange', () => this.openLinkFromLocation());
     this.sapia.host?.onOpenLink((link) => void this.openSharedLink(link));
+    // Git conflicts surface from saves and syncs: ask right away.
+    effect(() => {
+      const request = this.projects.conflictRequest();
+      if (request) untracked(() => this.resolveConflicts(request.projectId));
+    });
+    effect(() => {
+      const changed = this.projects.changed();
+      if (changed) untracked(() => void this.ws.reloadFromProject(changed.projectId));
+    });
+  }
+
+  // -- projects ----------------------------------------------------------------------
+  private conflictDialogOpen = false;
+
+  protected resolveConflicts(projectId: string): void {
+    const project = this.projects.byId(projectId);
+    if (!project || project.status.state !== 'conflict' || this.conflictDialogOpen) return;
+    this.conflictDialogOpen = true;
+    const ref = this.dialog.open<ConflictDialog, ConflictDialogData>(ConflictDialog, { data: { project }, autoFocus: false });
+    ref.afterClosed().subscribe((status) => {
+      this.conflictDialogOpen = false;
+      if (status) this.snack.open(this.t('conflict.resolved'), undefined, { duration: 3500 });
+    });
+  }
+
+  /** Creates a project; `forOpenDiagram` also moves the open diagram there. */
+  protected async createProject(forOpenDiagram = false): Promise<void> {
+    const project = await firstValueFrom(this.dialog.open<ProjectDialog, ProjectDialogData, ProjectInfo>(ProjectDialog, { data: {}, autoFocus: 'input' }).afterClosed());
+    if (!project) return;
+    if (forOpenDiagram) await this.moveOpenDiagram(project.id);
+    else this.showProject(project.id);
+    this.snack.open(this.t('project.created', { name: this.projects.name(project) }), undefined, { duration: 3500 });
+  }
+
+  protected manageProjects(): void {
+    this.dialog.open(ProjectsDialog, { autoFocus: false });
+  }
+
+  /** Switches the library to a project and shows it. */
+  protected showProject(projectId: string): void {
+    this.projects.setActive(projectId);
+    this.libraryOpen.set(true);
+  }
+
+  protected async moveOpenDiagram(projectId: string): Promise<void> {
+    if (projectId === this.ws.projectId()) return;
+    const name = this.projects.name(this.projects.byId(projectId));
+    try {
+      const saved = !!this.ws.id();
+      await this.ws.moveTo(projectId);
+      this.snack.open(this.t(saved ? 'project.moved' : 'project.willSaveTo', { name: this.ws.name(), project: name }), undefined, { duration: 3500 });
+    } catch (e) {
+      this.snack.open(this.t('project.moveFailed', { message: ProjectService.message(e) }), undefined, { duration: 6000 });
+    }
+  }
+
+  protected async moveDiagram(diagram: StoredDiagramMeta, to: string): Promise<void> {
+    try {
+      await this.ws.moveDiagram(diagram.id, this.projects.activeId(), to);
+      const project = this.projects.name(this.projects.byId(to));
+      const ref = this.snack.open(this.t('project.moved', { name: diagram.name, project }), this.t('project.show'), { duration: 5000 });
+      ref.onAction().subscribe(() => this.showProject(to));
+    } catch (e) {
+      this.snack.open(this.t('project.moveFailed', { message: ProjectService.message(e) }), undefined, { duration: 6000 });
+    }
   }
 
   // -- sharing -------------------------------------------------------------------
@@ -338,9 +411,11 @@ export class App {
     this.focusEditor();
   }
 
-  protected async open(diagram: StoredDiagramMeta): Promise<void> {
-    if (diagram.id !== this.ws.id() && !(await this.guardUnsaved())) return;
-    await this.ws.openDiagram(diagram.id);
+  protected async open(diagram: StoredDiagramMeta & { projectId?: string }): Promise<void> {
+    const projectId = diagram.projectId ?? this.projects.activeId();
+    const same = diagram.id === this.ws.id() && projectId === this.ws.projectId();
+    if (!same && !(await this.guardUnsaved())) return;
+    if (!same) await this.ws.openDiagram(diagram.id, projectId);
     this.libraryOpen.set(false);
     this.focusEditor();
   }
@@ -348,9 +423,22 @@ export class App {
   protected async save(): Promise<void> {
     try {
       await this.ws.save();
-      this.snack.open(this.t('action.saved'));
+      const project = this.ws.project();
+      const name = this.projects.name(project);
+      switch (project?.location.type === 'git' ? project.status.state : 'local') {
+        case 'synced':
+          return void this.snack.open(this.t('project.saved.pushed', { project: name, branch: project?.status.branch ?? '' }), undefined, { duration: 3000 });
+        case 'offline':
+        case 'pending':
+        case 'error':
+          return void this.snack.open(this.t('project.saved.local', { project: name }), undefined, { duration: 5000 });
+        case 'conflict':
+          return;
+        default:
+          this.snack.open(this.t('project.saved', { project: name }), undefined, { duration: 2500 });
+      }
     } catch (e) {
-      this.snack.open(e instanceof Error ? e.message : String(e));
+      this.snack.open(ProjectService.message(e), undefined, { duration: 6000 });
     }
   }
 
@@ -360,7 +448,11 @@ export class App {
   }
 
   protected async remove(diagram: { id: string; name: string } | null = null): Promise<void> {
-    const target = diagram ?? (this.ws.id() ? { id: this.ws.id()!, name: this.ws.name() } : null);
+    const target = diagram
+      ? { ...diagram, projectId: this.projects.activeId() }
+      : this.ws.id()
+        ? { id: this.ws.id()!, name: this.ws.name(), projectId: this.ws.projectId() }
+        : null;
     if (!target) return;
     const choice = await this.confirm({
       title: this.t('confirm.delete.title'),
@@ -371,7 +463,7 @@ export class App {
       ],
     });
     if (choice !== 'delete') return;
-    await this.ws.deleteDiagram(target.id);
+    await this.ws.deleteDiagram(target.id, target.projectId);
     this.snack.open(this.t('library.deleted', { name: target.name }));
   }
 

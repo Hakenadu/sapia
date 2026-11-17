@@ -1,10 +1,11 @@
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { redactConfig } from '@sapia/core';
-import type { HostBootstrap, HostPlugin, HostPreferences, OnboardingResult, SapiaConfig } from '@sapia/core';
+import type { HostBootstrap, HostPlugin, HostPreferences, OnboardingResult, ProjectManager, SapiaConfig } from '@sapia/core';
 import { AiService } from './ai-service';
 import { ConfigStore } from './config-store';
-import { FileDiagramStore } from './diagram-store';
+import { createGitRunner } from './git-store';
+import { createDesktopProjects, projectFolder } from './projects';
 import { expandPath } from './paths';
 import type { SapiaPaths } from './paths';
 import { globalNpmRoot, resolvePlugins } from './plugins';
@@ -41,6 +42,8 @@ export class HostService {
   readonly providers: AiProviderRegistry = createDefaultProviderRegistry();
   readonly ai: AiService;
   readonly roots: StaticRoots;
+  /** Projects and their diagrams (default project, folders, Git repositories). */
+  readonly projects: ProjectManager;
   private plugins: ResolvedPlugin[] = [];
   private pluginErrors: { origin: string; error: string }[] = [];
   private hostPlugins: HostPlugin[] = [];
@@ -51,15 +54,27 @@ export class HostService {
     this.configStore = new ConfigStore(options.paths.config);
     this.roots = { web: options.webRoot, plugins: new Map(), remoteOrigins: [] };
     this.ai = new AiService({ config: () => this.config, providers: this.providers, env: this.env });
+    this.projects = createDesktopProjects({
+      home: options.paths.home,
+      defaultDirectory: () => this.defaultDirectory,
+      git: createGitRunner({ env: this.env }),
+    });
   }
 
   get config(): SapiaConfig {
     return this.configStore.current.config;
   }
 
-  get store(): FileDiagramStore {
+  /** Where the default project keeps its diagrams: `storage.directory` or `~/.sapia/diagrams`. */
+  get defaultDirectory(): string {
     const configured = this.config.storage.directory;
-    return new FileDiagramStore(configured ? expandPath(configured, this.options.paths.home) : this.options.paths.diagrams);
+    return configured ? expandPath(configured, this.options.paths.home) : this.options.paths.diagrams;
+  }
+
+  /** The folder holding a project's diagram files, for revealing it in the file manager. */
+  async projectFolder(projectId: string): Promise<string | null> {
+    const project = (await this.projects.listProjects()).find((p) => p.id === projectId);
+    return project ? projectFolder(project, { home: this.options.paths.home, defaultDirectory: () => this.defaultDirectory }) : null;
   }
 
   /** Loads the config and resolves the plugins it references. Call once at startup. */

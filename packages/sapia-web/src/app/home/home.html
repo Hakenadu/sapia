@@ -67,7 +67,7 @@
       <section class="panel recent">
         <header>
           <h2>{{ t('home.recent') }}</h2>
-          @if (ws.library().length > recent().length) {
+          @if (projects.recent().length > recent().length) {
             <button class="link-button" (click)="libraryRequested.emit()">{{ t('home.recent.all') }} <sapia-icon name="arrow-right" [size]="13" /></button>
           }
         </header>
@@ -79,7 +79,14 @@
                   <sapia-language-badge [languageId]="diagram.languageId" [name]="languageName(diagram.languageId)" [size]="30" />
                   <span class="meta">
                     <strong>{{ diagram.name }}</strong>
-                    <small>{{ i18n.diagramType(diagram.diagramType) }} · {{ i18n.relativeTime(diagram.updatedAt) }}</small>
+                    <small>
+                      @if (multipleProjects()) {
+                        @if (projects.byId(diagram.projectId); as project) {
+                          <span class="in-project"><sapia-project-icon [type]="project.location.type" [isDefault]="project.isDefault" [size]="14" /> {{ projects.name(project) }}</span> ·
+                        }
+                      }
+                      {{ i18n.diagramType(diagram.diagramType) }} · {{ i18n.relativeTime(diagram.updatedAt) }}
+                    </small>
                   </span>
                   <sapia-icon class="chevron" name="chevron-right" [size]="15" />
                 </button>
@@ -97,6 +104,43 @@
         }
       </section>
     </div>
+
+    <!-- Projects ----------------------------------------------------------------->
+    <section class="projects" [attr.aria-label]="t('home.projects')">
+      <header>
+        <h2>{{ t('home.projects') }}</h2>
+        <button class="link-button" (click)="manageProjects.emit()">{{ t('project.manage') }} <sapia-icon name="arrow-right" [size]="13" /></button>
+      </header>
+      <div class="project-grid">
+        @for (project of projects.projects(); track project.id; let i = $index) {
+          @let status = projects.statusOf(project);
+          <button class="project-card" [class.active]="project.id === projects.activeId()" [style.--i]="i" (click)="projectChosen.emit(project.id)">
+            <span class="project-top">
+              <sapia-project-icon [type]="project.location.type" [isDefault]="project.isDefault" [size]="36" />
+              @if (project.location.type === 'git' || status.tone === 'danger') {
+                <span class="project-status" [attr.data-tone]="status.tone" [title]="status.detail ?? status.label">
+                  <sapia-icon [name]="status.icon" [size]="11" [class.spin]="status.tone === 'busy'" />
+                  {{ status.label }}
+                </span>
+              }
+            </span>
+            <strong>{{ projects.name(project) }}</strong>
+            <small class="project-desc">{{ project.description || t(project.isDefault ? 'project.type.default' : 'project.type.' + project.location.type) }}</small>
+            <span class="project-foot">
+              <span>{{ t('library.count', { count: projects.diagrams()[project.id]?.length ?? 0 }) }}</span>
+              @if (project.location.type !== 'local-storage') {
+                <span class="project-where" [title]="projects.locationLabel(project.location)"><sapia-icon [name]="project.location.type === 'git' ? 'branch' : 'folder'" [size]="11" />{{ projects.shortLocation(project.location) }}</span>
+              }
+            </span>
+          </button>
+        }
+        <button class="project-card add" (click)="createProject.emit()">
+          <span class="plus"><sapia-icon name="folder-plus" [size]="18" /></span>
+          <strong>{{ t('project.new') }}</strong>
+          <small class="project-desc">{{ t(desktop ? 'projects.addHint.desktop' : 'projects.addHint.web') }}</small>
+        </button>
+      </div>
+    </section>
 
     <!-- Desktop app (web only) ------------------------------------------------>
     @if (!desktop) {

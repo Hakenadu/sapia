@@ -105,7 +105,7 @@ export class AiChatService {
         {
           sessionId: this.sessionId,
           message,
-          system: buildAiSystemPrompt({ locale: this.i18n.locale(), capabilities: this.workspace.capabilities() }),
+          system: buildAiSystemPrompt({ locale: this.i18n.locale(), capabilities: this.workspace.capabilities(), projects: this.workspace.aiProjects() }),
           tools: tools.specs(),
         },
         { onEvent, executeTool },

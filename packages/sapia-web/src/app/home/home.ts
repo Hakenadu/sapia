@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import type { SafeHtml } from '@angular/platform-browser';
-import type { StoredDiagramMeta } from '@sapia/core';
+import { ProjectService } from '../core/project.service';
+import type { ProjectDiagram } from '../core/project.service';
 import { glyphMarkup } from '../dialogs/diagram-glyphs';
 import { I18nService } from '../core/i18n.service';
 import { formatBinding } from '../core/keys';
@@ -11,6 +12,7 @@ import { Icon } from '../ui/icon';
 import type { IconName } from '../ui/icon';
 import { LanguageBadge } from '../ui/language-badge';
 import { Logo } from '../ui/logo';
+import { ProjectIcon } from '../ui/project-icon';
 
 const PROMO_KEY = 'sapia.home.desktopPromo';
 export const DESKTOP_INSTALL_COMMAND = 'npm i -g @sapia/desktop';
@@ -44,7 +46,7 @@ interface Action {
  */
 @Component({
   selector: 'sapia-home',
-  imports: [Icon, LanguageBadge, Logo],
+  imports: [Icon, LanguageBadge, Logo, ProjectIcon],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,13 +61,17 @@ export class Home {
   protected readonly i18n = inject(I18nService);
   protected readonly sapia = inject(SapiaService);
   protected readonly ws = inject(WorkspaceService);
+  protected readonly projects = inject(ProjectService);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly t = this.i18n.t;
 
   readonly created = output<void>();
   readonly templateChosen = output<QuickStart>();
   readonly libraryRequested = output<void>();
-  readonly opened = output<StoredDiagramMeta>();
+  readonly opened = output<ProjectDiagram>();
+  readonly projectChosen = output<string>();
+  readonly createProject = output<void>();
+  readonly manageProjects = output<void>();
   readonly aiRequested = output<void>();
   readonly pasteRequested = output<void>();
   readonly fileDropped = output<File>();
@@ -106,9 +112,9 @@ export class Home {
     }).slice(0, 6);
   });
 
-  protected readonly recent = computed(() =>
-    [...this.ws.library()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 4),
-  );
+  /** Recently edited diagrams across all projects. */
+  protected readonly recent = computed(() => this.projects.recent().slice(0, 4));
+  protected readonly multipleProjects = computed(() => this.projects.projects().length > 1);
 
   protected readonly shortcuts = computed(() => {
     const k = this.sapia.config().keybindings;

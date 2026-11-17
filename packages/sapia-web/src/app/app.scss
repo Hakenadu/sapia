@@ -66,6 +66,8 @@
 .library {
   flex: none;
   width: 312px;
+  // Stretch inside the shell; 100% plus the margins would overflow the window.
+  height: auto;
   margin: 8px 0 8px 0;
   border-radius: var(--radius-l);
   border: 1px solid var(--border);
@@ -107,7 +109,44 @@
   min-width: 0;
 }
 
+.project-crumb {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px 0 5px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+  .crumb-name {
+    min-width: 0;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.crumb-sep {
+  color: var(--text-3);
+  margin: 0 -2px;
+}
+
 .title {
+  flex: 0 0 auto;
   field-sizing: content;
   min-width: 60px;
   max-width: 34vw;
@@ -472,6 +511,23 @@ button.status-item {
   .ai-button .kbds,
   .save-state {
     display: none;
+  }
+}
+// With the library open its switcher already names the project.
+@media (max-width: 1640px) {
+  .shell.with-library .project-crumb .crumb-name {
+    display: none;
+  }
+  .shell.with-library .project-crumb {
+    padding: 0 5px;
+  }
+}
+@media (max-width: 1100px) {
+  .project-crumb .crumb-name {
+    display: none;
+  }
+  .project-crumb {
+    padding: 0 5px;
   }
 }
 @media (max-width: 760px) {

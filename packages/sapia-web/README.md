@@ -39,6 +39,6 @@ Sapia loads an optional `config.json` from its own deployment URL (see `config.e
 { "version": 1, "plugins": ["./sapia-plugin-dot.js"] }
 ```
 
-The build expects to be served from the root path; for a sub-path, build from source with `--base-href /your/path/`. Diagrams are kept in the browser's local storage.
+The build expects to be served from the root path; for a sub-path, build from source with `--base-href /your/path/`. Diagrams are kept in the browser's local storage, grouped into projects.
 
 [Full documentation](https://github.com/Hakenadu/sapia#readme) · MIT license
