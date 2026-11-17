@@ -3,7 +3,6 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { formatBinding } from '../core/keys';
 import { I18nService } from '../core/i18n.service';
 import { SapiaService } from '../core/sapia.service';
-import { LEGAL_DOCS } from '../legal/legal-content';
 import type { LegalDocId } from '../legal/legal-content';
 import { LegalService } from '../legal/legal.service';
 import { Icon } from '../ui/icon';
@@ -29,7 +28,6 @@ export class SettingsDialog {
   protected readonly tabs: Tab[] = ['plugins', 'languages', 'shortcuts', 'config', 'legal'];
   protected readonly tabIcons: Record<Tab, IconName> = { plugins: 'plugins', languages: 'languages', shortcuts: 'key', config: 'settings', legal: 'scale' };
   protected readonly legal = inject(LegalService);
-  protected readonly legalDocs = LEGAL_DOCS;
   protected readonly legalIcons: Record<LegalDocId, IconName> = { imprint: 'info', privacy: 'shield', terms: 'file-text' };
   protected readonly year = new Date().getFullYear();
   protected readonly tab = signal<Tab>('plugins');

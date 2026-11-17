@@ -204,6 +204,32 @@ Plugins can add provider types, see below.
 
 `npm run build:web` produces a static site in `packages/sapia-web/dist/sapia-web/browser`; the same build is published as [`@sapia/web`](https://www.npmjs.com/package/@sapia/web). It optionally loads `config.json` from its own deployment URL (see [`config.example.json`](packages/sapia-web/public/config.example.json)); plugins are referenced there by URL. For a deployment below a sub-path, build with `--base-href /your/path/`. Diagrams are kept in the browser's local storage, in one or more projects. The AI assistant is part of the desktop app, because a browser cannot keep an API key secret.
 
+### Legal notice and privacy policy
+
+Sapia ships a legal notice (imprint) and privacy policy for its author's own deployment, plus terms of use for the software. If you host Sapia yourself, you are the operator: replace or hide the imprint and privacy policy with the `legal` section of `config.json`. Each of `imprint` and `privacy` takes one of:
+
+| Value | Effect |
+|---|---|
+| `"default"` (or omitted) | the bundled text |
+| `false` | not shown anywhere |
+| `{ "url": "https://example.org/imprint" }` | links to your own page (opens in a new tab) |
+| `{ "markdown": "# Imprint\n…" }` | your own text, inline |
+| `{ "file": "legal/imprint.md" }` | your own Markdown file, relative to the deployment |
+
+`markdown` and `file` also accept an object keyed by locale, e.g. `{ "de": "legal/impressum.md", "en": "legal/imprint.md" }`. The terms of use cannot be replaced; Sapia Desktop always shows the bundled texts.
+
+```json
+{
+  "version": 1,
+  "legal": {
+    "imprint": { "file": { "de": "legal/impressum.md", "en": "legal/imprint.md" } },
+    "privacy": { "url": "https://example.org/privacy" }
+  }
+}
+```
+
+The texts are also reachable directly via `#impressum`, `#datenschutz` and `#nutzungsbedingungen` (or `#imprint`, `#privacy`, `#terms`).
+
 ## Writing a plugin
 
 A plugin is an ES module whose default export has an `id` and an `activate(context)` function. Everything registered through the context is removed again when the plugin is deactivated.

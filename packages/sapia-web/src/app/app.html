@@ -331,9 +331,15 @@
 
 <mat-menu #legalMenu="matMenu" xPosition="after" yPosition="above">
   <div class="menu-caption">{{ t('legal.title') }}</div>
-  <button mat-menu-item (click)="legal.open('imprint')"><sapia-icon name="info" /> <span class="menu-label">{{ t('legal.imprint') }}</span></button>
-  <button mat-menu-item (click)="legal.open('privacy')"><sapia-icon name="shield" /> <span class="menu-label">{{ t('legal.privacy') }}</span></button>
-  <button mat-menu-item (click)="legal.open('terms')"><sapia-icon name="file-text" /> <span class="menu-label">{{ t('legal.terms') }}</span></button>
+  @for (entry of legal.entries(); track entry.id) {
+    <button mat-menu-item (click)="legal.open(entry.id)">
+      <sapia-icon [name]="entry.id === 'imprint' ? 'info' : entry.id === 'privacy' ? 'shield' : 'file-text'" />
+      <span class="menu-label">{{ t('legal.' + entry.id) }}</span>
+      @if (entry.kind === 'url') {
+        <sapia-icon class="menu-trailing" name="external" [size]="13" />
+      }
+    </button>
+  }
 </mat-menu>
 
 <mat-menu #languageMenu="matMenu">

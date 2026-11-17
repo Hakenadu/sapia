@@ -222,7 +222,9 @@ const DE: LegalTexts = {
       {
         heading: '1. Anbieter und Leistung',
         blocks: [
-          { p: 'Anbieter ist Manuel Seiche (Kontakt siehe Impressum). Sapia ist ein Editor für textbasierte Diagramme und wird unentgeltlich und ohne Gewinnerzielungsabsicht als freie Software bereitgestellt.' },
+          { p: 'Anbieter der Software ist:' },
+          { contact: true },
+          { p: 'Sapia ist ein Editor für textbasierte Diagramme und wird unentgeltlich und ohne Gewinnerzielungsabsicht als freie Software bereitgestellt. Wird die Web-App von Dritten auf eigenen Servern betrieben, ist der jeweilige Betreiber für diesen Betrieb verantwortlich; Impressum und Datenschutzerklärung einer solchen Instanz stammen vom Betreiber.' },
           {
             p: 'Ein Anspruch auf eine bestimmte Verfügbarkeit, Funktion, Fehlerfreiheit, Unterstützung oder Weiterentwicklung besteht nicht. Der Anbieter kann den Betrieb oder einzelne Funktionen jederzeit ändern, einschränken oder einstellen.',
           },
@@ -478,7 +480,9 @@ const EN: LegalTexts = {
       {
         heading: '1. Provider and service',
         blocks: [
-          { p: 'The provider is Manuel Seiche (contact details in the legal notice). Sapia is an editor for text-based diagrams and is provided free of charge and without commercial intent as free software.' },
+          { p: 'The provider of the software is:' },
+          { contact: true },
+          { p: 'Sapia is an editor for text-based diagrams and is provided free of charge and without commercial intent as free software. If third parties run the web app on their own servers, the respective operator is responsible for that operation; the legal notice and privacy policy of such an instance come from its operator.' },
           {
             p: 'There is no entitlement to any particular availability, functionality, freedom from errors, support or further development. The provider may change, restrict or discontinue the service or individual features at any time.',
           },

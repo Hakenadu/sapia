@@ -3,7 +3,8 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { I18nService } from '../core/i18n.service';
 import { Icon } from '../ui/icon';
 import type { IconName } from '../ui/icon';
-import { LEGAL_DOCS, LEGAL_PROVIDER, LEGAL_UPDATED, legalTexts } from './legal-content';
+import { LEGAL_PROVIDER, LEGAL_UPDATED, legalTexts } from './legal-content';
+import { LegalService } from './legal.service';
 import type { LegalDocId } from './legal-content';
 
 export interface LegalDialogData {
@@ -24,16 +25,28 @@ const ICONS: Record<LegalDocId, IconName> = { imprint: 'info', privacy: 'shield'
     </header>
 
     <nav class="tabs" role="tablist">
-      @for (id of docs; track id) {
-        <button role="tab" [class.active]="doc() === id" [attr.aria-selected]="doc() === id" (click)="doc.set(id)">
-          <sapia-icon [name]="icons[id]" [size]="14" />
-          <span class="long">{{ t('legal.' + id) }}</span>
-          <span class="short">{{ t('legal.' + id + '.short') }}</span>
+      @for (entry of legal.entries(); track entry.id) {
+        <button role="tab" [class.active]="doc() === entry.id" [attr.aria-selected]="doc() === entry.id" (click)="select(entry.id)">
+          <sapia-icon [name]="icons[entry.id]" [size]="14" />
+          <span class="long">{{ t('legal.' + entry.id) }}</span>
+          <span class="short">{{ t('legal.' + entry.id + '.short') }}</span>
+          @if (entry.kind === 'url') {
+            <sapia-icon class="external" name="external" [size]="12" />
+          }
         </button>
       }
     </nav>
 
     <article #scroller tabindex="-1">
+      @if (custom(); as state) {
+        @if (state.html !== null) {
+          <div class="custom" [innerHTML]="state.html"></div>
+        } @else if (state.error) {
+          <p class="load-error"><sapia-icon name="alert" [size]="15" /> {{ t('legal.loadFailed', { message: state.error }) }}</p>
+        } @else {
+          <p class="loading"><sapia-icon name="loader" [size]="15" /></p>
+        }
+      } @else {
       <h1>{{ text().title }}</h1>
       @if (text().lead; as lead) {
         <p class="lead">{{ lead }}</p>
@@ -69,6 +82,7 @@ const ICONS: Record<LegalDocId, IconName> = { imprint: 'info', privacy: 'shield'
           <span>{{ t('legal.translation') }}</span>
         }
       </footer>
+      }
     </article>
   `,
   styles: `
@@ -235,6 +249,81 @@ const ICONS: Record<LegalDocId, IconName> = { imprint: 'info', privacy: 'shield'
       color: var(--text-3);
       font-size: 12px;
     }
+    .external {
+      color: var(--text-3);
+    }
+    /* Operator Markdown arrives as innerHTML, outside the view encapsulation. */
+    .custom {
+      padding-top: 6px;
+    }
+    .custom ::ng-deep :is(h1, h2, h3) {
+      color: var(--text);
+      letter-spacing: -0.015em;
+    }
+    .custom ::ng-deep h1 {
+      margin: 18px 0 6px;
+      font-size: 22px;
+      font-weight: 720;
+      letter-spacing: -0.025em;
+    }
+    .custom ::ng-deep h2 {
+      margin: 22px 0 6px;
+      font-size: 14px;
+      font-weight: 660;
+    }
+    .custom ::ng-deep h3 {
+      margin: 18px 0 6px;
+      font-size: 13.5px;
+      font-weight: 650;
+    }
+    .custom ::ng-deep p {
+      margin: 0 0 10px;
+    }
+    .custom ::ng-deep ul,
+    .custom ::ng-deep ol {
+      margin: 0 0 10px;
+      padding-left: 20px;
+    }
+    .custom ::ng-deep li::marker {
+      color: var(--primary);
+    }
+    .custom ::ng-deep a {
+      color: var(--primary-strong);
+      font-weight: 560;
+      text-decoration: none;
+    }
+    .custom ::ng-deep a:hover {
+      text-decoration: underline;
+    }
+    .custom ::ng-deep strong {
+      color: var(--text);
+      font-weight: 650;
+    }
+    .custom ::ng-deep code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+    .custom ::ng-deep hr {
+      margin: 20px 0;
+      border: 0;
+      border-top: 1px solid var(--border);
+    }
+    .loading {
+      display: grid;
+      place-items: center;
+      padding: 40px 0;
+      color: var(--text-3);
+      sapia-icon {
+        animation: sapia-spin 1s linear infinite;
+      }
+    }
+    .load-error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      color: var(--danger);
+    }
     @media (max-width: 600px) {
       :host {
         width: 100vw;
@@ -277,10 +366,13 @@ export class LegalDialog {
   private readonly i18n = inject(I18nService);
   protected readonly t = this.i18n.t;
 
-  protected readonly docs = LEGAL_DOCS;
+  protected readonly legal = inject(LegalService);
   protected readonly icons = ICONS;
   protected readonly provider = LEGAL_PROVIDER;
-  protected readonly doc = signal<LegalDocId>(this.data?.doc ?? 'imprint');
+  protected readonly doc = signal<LegalDocId>(this.initialDoc());
+
+  /** Loaded operator text for the current tab; `null` while the bundled text is shown. */
+  protected readonly custom = signal<{ html: string | null; error?: string } | null>(null);
 
   protected readonly german = computed(() => this.i18n.locale().toLowerCase().startsWith('de'));
   protected readonly text = computed(() => legalTexts(this.i18n.locale())[this.doc()]);
@@ -297,6 +389,27 @@ export class LegalDialog {
       this.doc();
       this.scroller()?.nativeElement.scrollTo({ top: 0 });
     });
+    effect(() => {
+      const entry = this.legal.entry(this.doc());
+      const locale = this.i18n.locale();
+      if (!entry || entry.kind === 'builtin' || entry.kind === 'url') return this.custom.set(null);
+      this.custom.set({ html: null });
+      this.legal.render(entry, locale).then(
+        (html) => this.doc() === entry.id && this.custom.set({ html }),
+        (e: unknown) => this.doc() === entry.id && this.custom.set({ html: null, error: e instanceof Error ? e.message : String(e) }),
+      );
+    });
+  }
+
+  private initialDoc(): LegalDocId {
+    const entries = this.legal.entries().filter((entry) => entry.kind !== 'url');
+    const wanted = this.data?.doc;
+    return entries.find((entry) => entry.id === wanted)?.id ?? entries[0]?.id ?? 'terms';
+  }
+
+  protected select(doc: LegalDocId): void {
+    if (this.legal.entry(doc)?.kind === 'url') this.legal.open(doc);
+    else this.doc.set(doc);
   }
 }
 

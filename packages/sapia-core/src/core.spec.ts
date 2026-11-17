@@ -12,6 +12,7 @@ import {
   createSapia,
   definePlugin,
   normalizeConfig,
+  localizedText,
   pluginFromModule,
   redactConfig,
   isValidHeaderName,
@@ -102,6 +103,39 @@ describe('config', () => {
     expect(config.theme).toBe('system');
     expect(config.diagramTheme).toBe('adaptive');
     expect(config.ai.enabled).toBe(false);
+  });
+  it('reads replaceable legal documents', () => {
+    expect(normalizeConfig(undefined).config.legal).toEqual({});
+    const { config, issues } = normalizeConfig({
+      legal: {
+        imprint: false,
+        privacy: { markdown: { de: '# Datenschutz', en: '# Privacy' } },
+      },
+    });
+    expect(issues).toEqual([]);
+    expect(config.legal).toEqual({ imprint: false, privacy: { markdown: { de: '# Datenschutz', en: '# Privacy' } } });
+    expect(normalizeConfig({ legal: { imprint: { url: 'https://example.org/imprint' }, privacy: { file: 'legal/privacy.md' } } }).config.legal).toEqual({
+      imprint: { url: 'https://example.org/imprint' },
+      privacy: { file: 'legal/privacy.md' },
+    });
+  });
+  it('rejects invalid legal documents and keeps the terms fixed', () => {
+    const { config, issues } = normalizeConfig({
+      legal: { terms: false, imprint: { url: 'javascript:alert(1)' }, privacy: { markdown: '', file: 'x.md' }, other: 'default' },
+    });
+    expect(config.legal).toEqual({});
+    expect(issues).toEqual([
+      'legal.terms cannot be configured: the terms of use belong to Sapia itself',
+      'legal.imprint.url must be an http(s) URL or a path',
+      'legal.privacy must be "default", false, or an object with exactly one of "url", "markdown" or "file"',
+      'legal.other is unknown; use "imprint" or "privacy"',
+    ]);
+  });
+  it('picks localized texts', () => {
+    expect(localizedText('same', 'de')).toBe('same');
+    expect(localizedText({ de: 'DE', en: 'EN' }, 'de-AT')).toBe('DE');
+    expect(localizedText({ de: 'DE', en: 'EN' }, 'fr')).toBe('EN');
+    expect(localizedText({ de: 'DE' }, 'fr')).toBe('DE');
   });
   it('reads the diagram theme mode', () => {
     expect(normalizeConfig({ diagramTheme: 'static' }).config.diagramTheme).toBe('static');

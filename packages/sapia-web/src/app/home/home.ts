@@ -4,7 +4,6 @@ import type { SafeHtml } from '@angular/platform-browser';
 import { ProjectService } from '../core/project.service';
 import type { ProjectDiagram } from '../core/project.service';
 import { glyphMarkup } from '../dialogs/diagram-glyphs';
-import { LEGAL_DOCS } from '../legal/legal-content';
 import { LegalService } from '../legal/legal.service';
 import { I18nService } from '../core/i18n.service';
 import { formatBinding } from '../core/keys';
@@ -66,7 +65,6 @@ export class Home {
   protected readonly projects = inject(ProjectService);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly legal = inject(LegalService);
-  protected readonly legalDocs = LEGAL_DOCS;
   protected readonly year = new Date().getFullYear();
   protected readonly t = this.i18n.t;
 

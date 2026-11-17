@@ -212,8 +212,8 @@
     <nav class="legal" [attr.aria-label]="t('legal.title')">
       <span class="legal-owner">© {{ year }} Manuel Seiche · MIT</span>
       <span class="legal-links">
-        @for (doc of legalDocs; track doc) {
-          <button type="button" (click)="legal.open(doc)">{{ t('legal.' + doc) }}</button>
+        @for (entry of legal.entries(); track entry.id) {
+          <button type="button" (click)="legal.open(entry.id)">{{ t('legal.' + entry.id) }}</button>
         }
       </span>
     </nav>
