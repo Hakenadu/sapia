@@ -1,9 +1,9 @@
 <div class="shell" [class.with-library]="libraryOpen()">
   <!-- Rail ------------------------------------------------------------------>
   <nav class="rail" [attr.aria-label]="'Sapia'">
-    <div class="logo" [matTooltip]="t('app.tagline')" matTooltipPosition="right">
+    <button type="button" class="logo" (click)="goHome()" [matTooltip]="t('action.home')" matTooltipPosition="right" [attr.aria-label]="t('action.home')">
       <sapia-logo [size]="30" />
-    </div>
+    </button>
 
     <button class="icon-button rail-button" (click)="newDiagram()" [matTooltip]="t('action.new') + '  ' + keys().new" matTooltipPosition="right" [attr.aria-label]="t('action.new')">
       <sapia-icon name="new" [size]="18" />
