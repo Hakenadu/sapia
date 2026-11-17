@@ -855,6 +855,40 @@ h1 {
   margin-left: auto;
 }
 
+// -- legal -----------------------------------------------------------------------
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 18px;
+  margin-top: -6px;
+  padding: 12px 4px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 12px;
+  animation: sapia-fade-in 0.6s var(--ease) 0.5s both;
+}
+.legal-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  button {
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-weight: 550;
+    cursor: pointer;
+    &:hover {
+      color: var(--primary-strong);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  }
+}
+
 // -- drop zone -------------------------------------------------------------------
 .drop-overlay {
   position: absolute;

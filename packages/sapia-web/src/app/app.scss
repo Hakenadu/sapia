@@ -628,7 +628,8 @@ button.status-item {
     background: color-mix(in srgb, var(--surface-1) 85%, transparent);
     backdrop-filter: blur(16px);
   }
-  .logo {
+  .logo,
+  .legal-button {
     display: none;
   }
   .view-switch {

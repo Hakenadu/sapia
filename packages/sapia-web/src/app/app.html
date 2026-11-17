@@ -41,6 +41,9 @@
     <button class="icon-button rail-button" (click)="openSettings()" [matTooltip]="t('action.settings')" matTooltipPosition="right" [attr.aria-label]="t('action.settings')">
       <sapia-icon name="settings" [size]="18" />
     </button>
+    <button class="icon-button rail-button legal-button" [matMenuTriggerFor]="legalMenu" [matTooltip]="t('legal.title')" matTooltipPosition="right" [attr.aria-label]="t('legal.title')">
+      <sapia-icon name="scale" [size]="18" />
+    </button>
   </nav>
 
   <!-- Library --------------------------------------------------------------->
@@ -324,6 +327,13 @@
       }
     </button>
   }
+</mat-menu>
+
+<mat-menu #legalMenu="matMenu" xPosition="after" yPosition="above">
+  <div class="menu-caption">{{ t('legal.title') }}</div>
+  <button mat-menu-item (click)="legal.open('imprint')"><sapia-icon name="info" /> <span class="menu-label">{{ t('legal.imprint') }}</span></button>
+  <button mat-menu-item (click)="legal.open('privacy')"><sapia-icon name="shield" /> <span class="menu-label">{{ t('legal.privacy') }}</span></button>
+  <button mat-menu-item (click)="legal.open('terms')"><sapia-icon name="file-text" /> <span class="menu-label">{{ t('legal.terms') }}</span></button>
 </mat-menu>
 
 <mat-menu #languageMenu="matMenu">

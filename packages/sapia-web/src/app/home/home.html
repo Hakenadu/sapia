@@ -207,6 +207,16 @@
         <button class="link-button promo-restore" (click)="setPromo(true)"><sapia-icon name="system" [size]="13" /> Sapia Desktop</button>
       }
     </footer>
+
+    <!-- Legal ----------------------------------------------------------------->
+    <nav class="legal" [attr.aria-label]="t('legal.title')">
+      <span class="legal-owner">© {{ year }} Manuel Seiche · MIT</span>
+      <span class="legal-links">
+        @for (doc of legalDocs; track doc) {
+          <button type="button" (click)="legal.open(doc)">{{ t('legal.' + doc) }}</button>
+        }
+      </span>
+    </nav>
   </div>
 </div>
 

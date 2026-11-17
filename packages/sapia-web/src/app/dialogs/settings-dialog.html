@@ -7,8 +7,8 @@
   <nav role="tablist">
     @for (item of tabs; track item) {
       <button role="tab" [class.active]="tab() === item" [attr.aria-selected]="tab() === item" (click)="tab.set(item)">
-        <sapia-icon [name]="item === 'plugins' ? 'plugins' : item === 'languages' ? 'languages' : item === 'shortcuts' ? 'key' : 'settings'" [size]="15" />
-        {{ t('settings.' + item) }}
+        <sapia-icon [name]="tabIcons[item]" [size]="15" />
+        {{ t(item === 'legal' ? 'legal.title' : 'settings.' + item) }}
       </button>
     }
   </nav>
@@ -93,6 +93,19 @@
             </ul>
           </div>
         }
+      }
+      @case ('legal') {
+        @for (doc of legalDocs; track doc) {
+          <button type="button" class="row legal-row" (click)="legal.open(doc)">
+            <div class="plug"><sapia-icon [name]="legalIcons[doc]" [size]="16" /></div>
+            <div class="body">
+              <div class="title">{{ t('legal.' + doc) }}</div>
+              <div class="desc">{{ t('legal.' + doc + '.hint') }}</div>
+            </div>
+            <sapia-icon class="chevron" name="chevron-right" [size]="16" />
+          </button>
+        }
+        <p class="version-line">© {{ year }} Manuel Seiche · {{ t('legal.license') }}</p>
       }
     }
   </section>

@@ -5,6 +5,8 @@ import { formatBinding } from '../core/keys';
 import { I18nService } from '../core/i18n.service';
 import { SapiaService } from '../core/sapia.service';
 import { ThemeService } from '../core/theme.service';
+import { LEGAL_DOCS } from '../legal/legal-content';
+import { LegalService } from '../legal/legal.service';
 import { Icon } from '../ui/icon';
 import type { IconName } from '../ui/icon';
 import { Logo } from '../ui/logo';
@@ -41,6 +43,8 @@ export class Onboarding {
   protected readonly i18n = inject(I18nService);
   protected readonly sapia = inject(SapiaService);
   protected readonly theme = inject(ThemeService);
+  protected readonly legal = inject(LegalService);
+  protected readonly legalDocs = LEGAL_DOCS;
   protected readonly t = this.i18n.t;
 
   readonly finished = output<void>();
