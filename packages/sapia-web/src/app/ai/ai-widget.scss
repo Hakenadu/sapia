@@ -44,29 +44,31 @@
     0 0 0 1px var(--border-strong);
   overflow: hidden;
 
-  // Gradient hairline along the top edge. It is drawn as a full rounded
-  // border ring so it follows the corner radius, then masked to the top: it
-  // runs around both corners a little and fades out right below them instead
-  // of being cut off where the rounding starts.
-  &::before {
-    content: '';
+  // Gradient hairline along the top edge (an SVG rounded rect, see the
+  // template). It follows the corner radius a little past both corners and
+  // fades out right below them instead of being cut off where the rounding
+  // starts. A CSS ring (border-box minus padding-box mask) was tried first but
+  // rendered jagged on the curve at 1x pixel density.
+  .rim {
     position: absolute;
     inset: 0;
     z-index: 1;
-    border: 1.5px solid transparent;
-    border-radius: inherit;
-    // Horizontal brand gradient (purple left, teal right) like the former
-    // straight line; the 135deg token would turn mostly blue on a tall box.
-    background: linear-gradient(90deg, #8b7cf6 0%, #6d8dfa 45%, #4fd1c5 100%) border-box;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
     opacity: 0.9;
     pointer-events: none;
-    -webkit-mask:
-      linear-gradient(to bottom, #000 0, #000 14px, transparent 30px) border-box,
-      linear-gradient(#000 0 0) padding-box;
-    -webkit-mask-composite: source-out;
-    mask:
-      linear-gradient(to bottom, #000 0, #000 14px, transparent 30px) border-box subtract,
-      linear-gradient(#000 0 0) padding-box;
+    mask-image: linear-gradient(to bottom, #000 14px, transparent 30px);
+
+    rect {
+      x: 0.75px;
+      y: 0.75px;
+      width: calc(100% - 1.5px);
+      height: calc(100% - 1.5px);
+      rx: 19.25px;
+      fill: none;
+      stroke-width: 1.5px;
+    }
   }
 }
 

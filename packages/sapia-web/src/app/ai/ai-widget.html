@@ -1,5 +1,16 @@
 <div class="glow" aria-hidden="true"></div>
 <div class="panel" role="dialog" [attr.aria-label]="t('ai.title')">
+  <!-- Gradient hairline along the top edge, stroked as SVG for clean antialiasing on the rounded corners. -->
+  <svg class="rim" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="sapia-ai-rim">
+        <stop offset="0" stop-color="#8b7cf6" />
+        <stop offset="0.45" stop-color="#6d8dfa" />
+        <stop offset="1" stop-color="#4fd1c5" />
+      </linearGradient>
+    </defs>
+    <rect stroke="url(#sapia-ai-rim)" />
+  </svg>
   <header>
     <span class="spark"><sapia-icon name="sparkles" [size]="15" /></span>
     <span class="title">{{ t('ai.title') }}</span>
