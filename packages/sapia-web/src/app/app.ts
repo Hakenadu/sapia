@@ -21,6 +21,8 @@ import { ShareDialog } from './dialogs/share-dialog';
 import type { ShareDialogData } from './dialogs/share-dialog';
 import { CodeEditor } from './editor/code-editor';
 import { LibraryPanel } from './library/library-panel';
+import { Home } from './home/home';
+import type { QuickStart } from './home/home';
 import { Onboarding } from './onboarding/onboarding';
 import { Preview } from './preview/preview';
 import { Icon } from './ui/icon';
@@ -29,6 +31,12 @@ import { LanguageBadge } from './ui/language-badge';
 import { Logo } from './ui/logo';
 
 const SPLIT_KEY = 'sapia.split';
+
+/** True when the event comes from a text field, where keys and paste belong to the field. */
+function isTyping(event: Event): boolean {
+  const target = event.target as HTMLElement | null;
+  return !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+}
 
 interface Problem {
   diagnostic: Diagnostic;
@@ -39,12 +47,13 @@ interface Problem {
 /** The application shell: toolbar, editor / preview split, library, status bar. */
 @Component({
   selector: 'sapia-root',
-  imports: [AiWidget, CodeEditor, Icon, LanguageBadge, LibraryPanel, Logo, MatMenuModule, MatTooltipModule, Onboarding, Preview],
+  imports: [AiWidget, CodeEditor, Home, Icon, LanguageBadge, LibraryPanel, Logo, MatMenuModule, MatTooltipModule, Onboarding, Preview],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(window:keydown)': 'onKeydown($event)',
+    '(window:paste)': 'onPaste($event)',
     '(window:resize)': 'onResize()',
     '[attr.data-layout]': 'layout()',
     '[class.resizing]': 'resizing()',
@@ -61,6 +70,7 @@ export class App {
 
   private readonly convertTrigger = viewChild<MatMenuTrigger>('convertTrigger');
   protected readonly editor = viewChild(CodeEditor);
+  private readonly home = viewChild(Home);
 
   protected readonly libraryOpen = signal(false);
   protected readonly aiOpen = signal(false);
@@ -123,7 +133,7 @@ export class App {
 
   constructor() {
     effect(() => {
-      document.title = `${this.ws.dirty() ? '● ' : ''}${this.ws.name()} – Sapia`;
+      document.title = this.ws.isOpen() ? `${this.ws.dirty() ? '● ' : ''}${this.ws.name()} – Sapia` : 'Sapia';
     });
     effect(() => {
       if (this.ws.diagnostics().length === 0) this.problemsOpen.set(false);
@@ -172,6 +182,7 @@ export class App {
     const name = diagram.name.trim() || this.t('doc.untitled');
     this.ws.openShared(name, diagram.source);
     this.libraryOpen.set(false);
+    this.focusEditor();
     this.snack.open(this.t('share.opened', { name }), undefined, { duration: 5000 });
   }
 
@@ -194,11 +205,92 @@ export class App {
     };
     if (matchesBinding(event, keys.aiAssistant)) return run(() => this.toggleAi());
     if (this.dialog.openDialogs.length > 0) return;
-    if (matchesBinding(event, keys.save)) return run(() => void this.save());
+    if (!this.ws.isOpen()) {
+      // Start page: digits pick a quick-start template, unless the user is typing somewhere.
+      const quickStart = /^[1-9]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event) ? this.home()?.quickStart(Number(event.key) - 1) : undefined;
+      if (quickStart) return run(() => this.startFrom(quickStart));
+    }
+    if (this.ws.isOpen() && matchesBinding(event, keys.save)) return run(() => void this.save());
     if (matchesBinding(event, keys.newDiagram)) return run(() => void this.newDiagram());
     if (matchesBinding(event, keys.openLibrary)) return run(() => this.libraryOpen.update((v) => !v));
-    if (matchesBinding(event, keys.convert)) return run(() => this.convertTrigger()?.openMenu());
+    if (this.ws.isOpen() && matchesBinding(event, keys.convert)) return run(() => this.convertTrigger()?.openMenu());
     if (event.key === 'Escape' && this.libraryOpen() && !this.aiOpen()) return run(() => this.libraryOpen.set(false));
+  }
+
+  /** Pasting anywhere on the start page opens the clipboard: a share link or code, or diagram source. */
+  protected onPaste(event: ClipboardEvent): void {
+    if (this.ws.isOpen() || this.sapia.needsOnboarding() || this.dialog.openDialogs.length > 0 || isTyping(event)) return;
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    if (!text.trim()) return;
+    event.preventDefault();
+    void this.openText(text);
+  }
+
+  protected async pasteFromClipboard(): Promise<void> {
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      /* no clipboard access: fall back to the import dialog */
+    }
+    if (text.trim()) await this.openText(text);
+    else await this.openLinkDialog();
+  }
+
+  protected async openFile(file: File): Promise<void> {
+    if (file.size > 2_000_000) return void this.snack.open(this.t('home.file.tooLarge'), undefined, { duration: 4000 });
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      return void this.snack.open(this.t('home.file.unreadable'), undefined, { duration: 4000 });
+    }
+    const name = file.name.replace(/\.[^.]+$/, '').trim();
+    await this.openText(text, name || undefined, true);
+  }
+
+  /** Opens text from the clipboard or a file as a new, unsaved diagram. */
+  private async openText(text: string, name?: string, force = false): Promise<void> {
+    const trimmed = text.trim();
+    if (!trimmed.includes('\n') && (/^sapia1\./i.test(trimmed) || /[#&]d=/.test(trimmed)) && sharePayloadFrom(trimmed)) return this.openSharedLink(trimmed);
+    const detection = this.sapia.core.languages.detect(text);
+    const open = (): void => {
+      const title = name ?? (detection && detection.diagramType !== 'unknown' ? this.i18n.diagramType(detection.diagramType) : this.t('doc.untitled'));
+      this.ws.openShared(title, text);
+      this.libraryOpen.set(false);
+      this.focusEditor();
+    };
+    if (detection || force) {
+      open();
+      const language = this.sapia.core.languages.get(detection?.languageId)?.name;
+      this.snack.open(language ? this.t('home.pasted', { language }) : this.t('home.pastedPlain'), undefined, { duration: 4000 });
+      return;
+    }
+    const ref = this.snack.open(this.t('home.pasteUnknown'), this.t('home.pasteAnyway'), { duration: 6000 });
+    ref.onAction().subscribe(open);
+  }
+
+  protected onInstallCopied(): void {
+    this.snack.open(this.t('action.copied'), undefined, { duration: 2200 });
+  }
+
+  protected startFrom(item: QuickStart): void {
+    this.ws.newFromTemplate(item.languageId, item.diagramType);
+    this.libraryOpen.set(false);
+    this.focusEditor();
+  }
+
+  /** Closes the open diagram (asking about unsaved changes) and shows the start page. */
+  protected async closeDiagram(): Promise<void> {
+    if (!(await this.guardUnsaved())) return;
+    this.ws.close();
+    this.aiOpen.set(false);
+    this.problemsOpen.set(false);
+  }
+
+  /** The editor only exists while a diagram is open; wait for it to render. */
+  private focusEditor(): void {
+    setTimeout(() => this.editor()?.focus());
   }
 
   protected toggleAi(): void {
@@ -243,14 +335,14 @@ export class App {
     if (result === 'blank') this.ws.newBlank();
     else this.ws.newFromTemplate(result.languageId, result.diagramType);
     this.libraryOpen.set(false);
-    this.editor()?.focus();
+    this.focusEditor();
   }
 
   protected async open(diagram: StoredDiagramMeta): Promise<void> {
     if (diagram.id !== this.ws.id() && !(await this.guardUnsaved())) return;
     await this.ws.openDiagram(diagram.id);
     this.libraryOpen.set(false);
-    this.editor()?.focus();
+    this.focusEditor();
   }
 
   protected async save(): Promise<void> {

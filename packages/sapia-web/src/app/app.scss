@@ -669,3 +669,11 @@ button.status-item {
     padding: 10px 8px;
   }
 }
+
+// -- start page ------------------------------------------------------------------
+sapia-home {
+  margin: 10px 10px 10px 0;
+}
+:host([data-layout='tabs']) sapia-home {
+  margin: 8px;
+}

@@ -41,6 +41,8 @@ export class WorkspaceService {
   private readonly theme = inject(ThemeService);
 
   // -- document ------------------------------------------------------------
+  /** False while no diagram is open: the app shows its start page instead of the editor. */
+  readonly isOpen = signal(false);
   readonly id = signal<string | null>(null);
   readonly name = signal('');
   readonly source = signal('');
@@ -106,6 +108,14 @@ export class WorkspaceService {
     // Keep the working copy across reloads.
     effect(() => {
       if (!this.started()) return;
+      if (!this.isOpen()) {
+        try {
+          localStorage.removeItem(SESSION_KEY);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
       const session = { id: this.id(), name: this.name(), source: this.source(), savedSource: this.savedSource(), savedName: this.savedName() };
       try {
         localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -115,10 +125,9 @@ export class WorkspaceService {
     });
   }
 
-  /** Restores the last session or opens a starter diagram. */
+  /** Restores the last session; without one the start page is shown. */
   async start(): Promise<void> {
     await this.refreshLibrary();
-    let restored = false;
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (raw) {
@@ -130,13 +139,12 @@ export class WorkspaceService {
           this.source.set(session.source);
           this.savedSource.set(stillExists ? session.savedSource : null);
           this.savedName.set(stillExists ? session.savedName : null);
-          restored = true;
+          this.isOpen.set(true);
         }
       }
     } catch {
       /* corrupt session – start fresh */
     }
-    if (!restored) this.newFromTemplate('plantuml', 'sequence');
     this.started.set(true);
     this.schedule(this.source(), this.detection(), this.theme.diagramTheme(), 0);
   }
@@ -188,7 +196,19 @@ export class WorkspaceService {
     return true;
   }
 
+  /** Closes the open diagram without saving and returns to the start page. */
+  close(): void {
+    this.isOpen.set(false);
+    this.id.set(null);
+    this.name.set('');
+    this.source.set('');
+    this.savedSource.set(null);
+    this.savedName.set(null);
+    this.cursor.set({ line: 0, column: 0 });
+  }
+
   private open(id: string | null, name: string, source: string, saved: { source: string; name: string } | null): void {
+    this.isOpen.set(true);
     this.id.set(id);
     this.name.set(name);
     this.source.set(source);
@@ -231,11 +251,8 @@ export class WorkspaceService {
 
   async deleteDiagram(id: string): Promise<void> {
     await this.sapia.store.delete(id);
-    if (this.id() === id) {
-      this.id.set(null);
-      this.savedSource.set(null);
-      this.savedName.set(null);
-    }
+    // Deleting the open diagram closes it: back to the start page.
+    if (this.id() === id) this.close();
     await this.refreshLibrary();
   }
 
@@ -365,6 +382,7 @@ export class WorkspaceService {
   readonly aiWorkspace: AiWorkspace = {
     getActiveDiagram: () => this.snapshot(),
     setActiveSource: async (source) => {
+      if (!this.isOpen()) this.open(null, this.i18n.t('doc.untitled'), '', null);
       this.source.set(source);
       return this.snapshot();
     },
